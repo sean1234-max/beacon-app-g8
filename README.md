@@ -3,10 +3,10 @@
 
 Lib folder structure
 lib/
-├── Class/                  # Data blueprints (e.g., Event class, Club class)
-├── Database/               # Firebase logic (Auth, Firestore queries)
-├── Interface/              # Full pages (e.g., Home, Discovery, Profile)
-├── Styles/                 # Constants, colors, and theme data
+├── models/                  # Data blueprints (e.g., Event class, Club class)
+├── services/               # Firebase logic (Auth, Firestore queries)
+├── screens/              # Full pages (e.g., Home, Discovery, Profile)
+├── theme/                 # Constants, colors, and theme data
 ├── Widgets/                # Reusable UI pieces (e.g., EventCard, CustomButton, sidebar)
 ├── firebase_option.dart  
 └── main.dart               
