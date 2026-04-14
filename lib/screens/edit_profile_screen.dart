@@ -42,6 +42,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _updateProfile() async {
+    await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
+      'name': _nameController.text, // Changed from displayName to name for consistency
+      'bio': _bioController.text,
+      'studentId': _studentIdController.text.toUpperCase(), // Normalize to uppercase
+      'lastUpdated': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -122,6 +129,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.badge),
                     ),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return "Student ID is required";
+                      if (!RegExp(r'^[Tt][Pp]\d{6}$').hasMatch(val)) {
+                        return "Enter a valid ID (e.g., TP012345)";
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 20),
                   TextFormField(

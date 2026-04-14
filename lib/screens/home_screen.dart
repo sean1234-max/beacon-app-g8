@@ -1,3 +1,5 @@
+import 'package:assignment/screens/edit_event_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:assignment/screens/club_list_screen.dart';
@@ -23,12 +25,36 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   String _searchQuery = "";
+  String _userRole = 'student'; // Logic: only 'admin' or 'leader' see the FAB
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserRole();
+  }
+
+  void _fetchUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (mounted && doc.exists) {
+        setState(() {
+          // Fallback to 'student' if role field is missing
+          _userRole = doc.data()?['role'] ?? 'student';
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // We add the NotificationsScreen as the 4th item (index 3)
+    // Screens list inside build to react to _userRole or _searchQuery changes
     final List<Widget> _screens = [
-      EventListView(searchQuery: _searchQuery),
+      EventListView(searchQuery: _searchQuery, userRole: _userRole),
       const ClubsScreen(),
       const ProfileScreen(),
       const NotificationsScreen(),
@@ -40,29 +66,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           children: [
             UserAccountsDrawerHeader(
               decoration: const BoxDecoration(color: AppTheme.primaryBlue),
-              currentAccountPicture: CircleAvatar(
+              currentAccountPicture: const CircleAvatar(
                 backgroundColor: Colors.white,
-                backgroundImage: FirebaseAuth.instance.currentUser?.photoURL !=
-                        null
-                    ? NetworkImage(FirebaseAuth.instance.currentUser!.photoURL!)
-                    : null,
-                child: FirebaseAuth.instance.currentUser?.photoURL == null
-                    ? const Icon(Icons.person,
-                        size: 40, color: AppTheme.primaryBlue)
-                    : null,
+                child: Icon(Icons.person, size: 40, color: AppTheme.primaryBlue),
               ),
               accountName: Text(
-                  FirebaseAuth.instance.currentUser?.displayName ??
-                      "APU Student"),
-              accountEmail:
-                  Text(FirebaseAuth.instance.currentUser?.email ?? ""),
+                "${FirebaseAuth.instance.currentUser?.displayName ?? "Student"} (${_userRole.toUpperCase()})",
+              ),
+              accountEmail: Text(FirebaseAuth.instance.currentUser?.email ?? ""),
             ),
             ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text("Settings"),
-              onTap: () {},
+              leading: const Icon(Icons.home),
+              title: const Text("Home"),
+              onTap: () => setState(() => _selectedIndex = 0),
             ),
-            const Divider(),
+            const Spacer(),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text("Logout"),
@@ -75,59 +93,72 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         backgroundColor: AppTheme.primaryBlue,
         elevation: 4,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Container(
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: TextField(
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value.toLowerCase();
-              });
-            },
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: 'Search events...',
-              hintStyle: TextStyle(color: Colors.white60),
-              prefixIcon: Icon(Icons.search, color: Colors.white60, size: 20),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(vertical: 8),
-            ),
-          ),
-        ),
+        title: _buildSearchField(),
         actions: [
           IconButton(
-            // Using a Badge to make the notification icon stand out
             icon: const Badge(
               label: Text('2'),
               child: Icon(Icons.notifications, color: Colors.white),
             ),
-            onPressed: () {
-              setState(() {
-                _selectedIndex = 3; // Navigate to NotificationsScreen
-              });
-            },
+            onPressed: () => setState(() => _selectedIndex = 3),
           ),
         ],
       ),
       body: _screens[_selectedIndex],
+      
+      // The Conditional Logic for the Create Event Button
+      floatingActionButton: _shouldShowFab() 
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddEventScreen()),
+                );
+              },
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              label: const Text("Create Event"),
+              icon: const Icon(Icons.add),
+            )
+          : null,
+      
       bottomNavigationBar: BottomNavigationBar(
-        // If _selectedIndex is 3 (Notifications), we show 0 (Home) as active
-        // or you can handle it to show no active item.
-        currentIndex: _selectedIndex > 2 ? 0 : _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
         selectedItemColor: AppTheme.primaryBlue,
+        unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Clubs'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
+          BottomNavigationBarItem(icon: Icon(Icons.groups), label: "Clubs"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: "Alerts"),
         ],
+      ),
+    );
+  }
+
+  // Helper function to keep the build method clean
+  bool _shouldShowFab() {
+    return _selectedIndex == 0 && (_userRole == 'admin' || _userRole == 'leader');
+  }
+
+  Widget _buildSearchField() {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: TextField(
+        onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+        style: const TextStyle(color: Colors.white),
+        decoration: const InputDecoration(
+          hintText: 'Search events...',
+          hintStyle: TextStyle(color: Colors.white60),
+          prefixIcon: Icon(Icons.search, color: Colors.white60, size: 20),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 10),
+        ),
       ),
     );
   }
@@ -135,7 +166,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
 class EventListView extends StatelessWidget {
   final String searchQuery;
-  const EventListView({super.key, required this.searchQuery});
+  final String userRole;
+  const EventListView({super.key, required this.searchQuery, required this.userRole,});
+  
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
@@ -144,6 +177,7 @@ class EventListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    String userRole = 'student';
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -351,8 +385,6 @@ class EventListView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // We use a ListView.builder here, but since it's inside a SingleChildScrollView Column,
-              // we set shrinkWrap to true and physics to never scroll.
               StreamBuilder<List<Event>>(
                 stream: DatabaseService().getEvents(),
                 builder: (context, snapshot) {
@@ -386,20 +418,81 @@ class EventListView extends StatelessWidget {
                     );
                   }
 
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: filteredEvents.length,
-                    itemBuilder: (context, index) {
-                      return EventCard(
-                        event: filteredEvents[index],
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EventDetailsScreen(
-                                  event: filteredEvents[index]),
-                            ),
+                  return StreamBuilder<DocumentSnapshot>(
+                    // Fetch the current user's profile to get their role
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(FirebaseAuth.instance.currentUser?.uid)
+                        .snapshots(),
+                    builder: (context, userSnapshot) {
+                      // Default to 'student' if data isn't loaded yet or field is missing
+                      String role = 'student';
+                      if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                        final data = userSnapshot.data!.data() as Map<String, dynamic>;
+                        role = data['role'] ?? 'student';
+                      }
+
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredEvents.length,
+                        itemBuilder: (context, index) {
+                          final currentEvent = filteredEvents[index];
+                          
+                          return EventCard(
+                            event: currentEvent,
+                            userRole: role, // Provided role ('admin', 'leader', or 'student')
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EventDetailsScreen(event: currentEvent),
+                                ),
+                              );
+                            },
+                            
+                            // 1. Implementation of the Edit Logic
+                            onEdit: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditEventScreen(event: currentEvent),
+                                ),
+                              );
+                            },
+
+                            // 2. Implementation of the Delete Logic with Confirmation
+                            onDelete: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text("Delete Event?"),
+                                  content: const Text("Are you sure? This action cannot be undone."),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text("Cancel"),
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        Navigator.pop(context); // Close dialog
+                                        await FirebaseFirestore.instance
+                                            .collection('events')
+                                            .doc(currentEvent.id)
+                                            .delete();
+                                        
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text("Event deleted successfully")),
+                                          );
+                                        }
+                                      },
+                                      child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           );
                         },
                       );
@@ -410,19 +503,7 @@ class EventListView extends StatelessWidget {
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddEventScreen()),
-          );
-        },
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-        label: const Text("Create Event"),
-        icon: const Icon(Icons.add),
-      ),
+      ), // This returns 'nothing' if the user is a student
     );
   }
 }

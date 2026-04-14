@@ -8,6 +8,7 @@ class Event {
   final String location;
   final DateTime dateTime;
   final List<String> participants;
+  final String creatorId;
 
   Event({
     required this.id,
@@ -16,6 +17,7 @@ class Event {
     required this.location,
     required this.dateTime,
     required this.participants,
+    required this.creatorId,
   });
 
   // This helper makes the date look nice on the Dashboard (e.g., "12 Apr")
@@ -40,6 +42,7 @@ class Event {
       participants: data['participants'] != null 
           ? List<String>.from(data['participants']) 
           : [],
+      creatorId: data['creatorId'] ?? '',
     );
   }
 }

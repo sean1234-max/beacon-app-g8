@@ -29,9 +29,13 @@ class ClubLeaderDashboard extends StatelessWidget {
               final club = clubs[index];
               return ListTile(
                 title: Text(club['name']),
-                subtitle: Text(club['category']),
+                subtitle: Text("${club['category']} • Status: ${club['status'].toString().toUpperCase()}"),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showCreateEventSheet(context, club.id),
+                onTap: club['status'] == 'approved' 
+                    ? () => _showCreateEventSheet(context, club.id)
+                    : () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Club must be approved by Admin to create events.")),
+                      ),
               );
             },
           );
@@ -62,7 +66,7 @@ void _showCreateClubSheet(BuildContext context) {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("Register New Club", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+          const Text("Register New Club", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
           TextField(controller: nameController, decoration: const InputDecoration(labelText: "Club Name")),
           TextField(controller: categoryController, decoration: const InputDecoration(labelText: "Category (e.g. Sports)")),
           TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
@@ -74,6 +78,8 @@ void _showCreateClubSheet(BuildContext context) {
                 'category': categoryController.text,
                 'description': descController.text,
                 'leaderId': FirebaseAuth.instance.currentUser?.uid,
+                'status': 'pending', 
+                'createdAt': FieldValue.serverTimestamp(),
               });
               Navigator.pop(context);
             },
@@ -100,7 +106,7 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("Create Club Event", 
+          const Text("Create Club Event", 
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
           TextField(controller: titleController, decoration: const InputDecoration(labelText: "Event Title")),
           TextField(controller: descController, decoration: const InputDecoration(labelText: "Event Description")),
@@ -110,8 +116,9 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
               await FirebaseFirestore.instance.collection('events').add({
                 'title': titleController.text,
                 'description': descController.text,
-                'clubId': clubId, // This links the event to the club!
-                'dateTime': DateTime.now(), // We can add a proper picker later
+                'clubId': clubId, 
+                'creatorId': FirebaseAuth.instance.currentUser?.uid,
+                'dateTime': DateTime.now(), 
                 'createdBy': FirebaseAuth.instance.currentUser?.uid,
               });
               Navigator.pop(context);

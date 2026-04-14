@@ -46,10 +46,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
-              TextField(
+              TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Student Email'),
-                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || !value.contains('@')) {
+                    return 'Please enter a valid student email';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               TextField(
@@ -79,5 +84,36 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+    void _handleLogin() async {
+    // 1. Basic local check
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      var user = await _authService.signIn(
+        _emailController.text.trim(), // trim() removes accidental spaces
+        _passwordController.text,
+      );
+
+      if (user == null && mounted) {
+        throw Exception("Invalid credentials");
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 }

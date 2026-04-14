@@ -1,3 +1,5 @@
+import 'package:assignment/screens/admin_dashboard_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -48,11 +50,39 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
+        
         if (snapshot.hasData) {
-          return const MainNavigationScreen();// User is logged in
+          // USER IS LOGGED IN -> Now check their role in Firestore
+          return StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(snapshot.data!.uid)
+                .snapshots(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              }
+
+              if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                final String role = userData['role'] ?? 'student';
+
+                // REDIRECT BASED ON ROLE
+                if (role == 'admin') {
+                  return const AdminDashboardScreen();
+                } else {
+                  return const MainNavigationScreen();
+                }
+              }
+
+              // Fallback if user doc doesn't exist yet
+              return const MainNavigationScreen();
+            },
+          );
         }
+        
         return const LoginScreen(); // User is not logged in
       },
     );

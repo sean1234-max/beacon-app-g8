@@ -16,10 +16,12 @@ class _AddEventScreenState extends State<AddEventScreen> {
   final _descController = TextEditingController();
   final _locController = TextEditingController();
   
+  // Note: userRole should ideally be passed in or fetched from Auth
+  String userRole = 'leader'; 
+  
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
 
-  // Function to pick date and time
   Future<void> _pickDateTime() async {
     DateTime? date = await showDatePicker(
       context: context,
@@ -41,6 +43,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
   }
 
   void _submitEvent() async {
+    // Basic validation
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -48,12 +51,22 @@ class _AddEventScreenState extends State<AddEventScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       
+      // Check if user is logged in
+      if (user == null) {
+        throw Exception("You must be logged in to create an event.");
+      }
+
+      // Step 1: Save the event with the 'creatorId'
       await FirebaseFirestore.instance.collection('events').add({
         'title': _titleController.text.trim(),
         'description': _descController.text.trim(),
         'location': _locController.text.trim(),
         'dateTime': Timestamp.fromDate(_selectedDate),
-        'clubId': user?.uid, // Ideally, this would be the specific Club ID
+        
+        // This line is the most important for the "Modify" feature:
+        'creatorId': user.uid, 
+        
+        'clubId': "APU General", 
         'participants': [],
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -65,18 +78,26 @@ class _AddEventScreenState extends State<AddEventScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e")),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Create New Event")),
+      appBar: AppBar(
+        title: const Text("Create New Event"),
+        // Match your APU Connect theme
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF003366), // Example primary blue
+        elevation: 0,
+      ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
         : Padding(
@@ -87,34 +108,66 @@ class _AddEventScreenState extends State<AddEventScreen> {
                 children: [
                   TextFormField(
                     controller: _titleController,
-                    decoration: const InputDecoration(labelText: "Event Title", border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: "Event Title", 
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.event),
+                    ),
                     validator: (val) => val!.isEmpty ? "Enter a title" : null,
                   ),
                   const SizedBox(height: 15),
                   TextFormField(
                     controller: _descController,
-                    decoration: const InputDecoration(labelText: "Description", border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: "Description", 
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
                     maxLines: 3,
                     validator: (val) => val!.isEmpty ? "Enter a description" : null,
                   ),
                   const SizedBox(height: 15),
                   TextFormField(
                     controller: _locController,
-                    decoration: const InputDecoration(labelText: "Location (e.g. Block B, L3)", border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: "Location (e.g. Block B, L3)", 
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.location_on),
+                    ),
                     validator: (val) => val!.isEmpty ? "Enter a location" : null,
                   ),
                   const SizedBox(height: 15),
-                  ListTile(
-                    title: Text("Date: ${DateFormat('dd MMM yyyy, hh:mm a').format(_selectedDate)}"),
-                    trailing: const Icon(Icons.calendar_month),
+                  // Date Picker UI
+                  InkWell(
                     onTap: _pickDateTime,
-                    tileColor: Colors.blue.withOpacity(0.1),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    child: Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                        color: Colors.blue.withOpacity(0.05),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_month, color: Color(0xFF003366)),
+                          const SizedBox(width: 10),
+                          Text(
+                            "Date: ${DateFormat('dd MMM yyyy, hh:mm a').format(_selectedDate)}",
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 30),
                   ElevatedButton(
                     onPressed: _submitEvent,
-                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF003366),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                     child: const Text("Post Event", style: TextStyle(fontSize: 18)),
                   ),
                 ],

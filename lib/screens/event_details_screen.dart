@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -20,20 +21,22 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
   void _handleRegistration() async {
-    if (userId == null) return;
+  if (userId == null) return;
+  setState(() => _isRegistering = true);
 
-    setState(() => _isRegistering = true);
+  await DatabaseService().joinEvent(widget.event.id, userId!);
 
-    await DatabaseService().joinEvent(widget.event.id, userId!);
-
-    if (mounted) {
-      setState(() => _isRegistering = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Successfully registered! Your Entry Pass is ready.")),
-      );
-      // We don't Navigator.pop here anymore, so the user can see their QR code!
-    }
+  if (mounted) {
+    setState(() {
+      _isRegistering = false;
+      // Manually add the ID to the local list to trigger a UI refresh
+      widget.event.participants.add(userId!); 
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Successfully registered!")),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -181,5 +184,35 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         )
       ],
     );
+  }
+
+  // Inside your EventDetailsScreen
+  Widget _buildJoinButton(Event event, String currentUserId) {
+    bool isJoined = event.participants.contains(currentUserId);
+
+    return ElevatedButton(
+      onPressed: () => _toggleJoinStatus(event.id, currentUserId, isJoined),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isJoined ? Colors.grey : AppTheme.primaryBlue,
+        minimumSize: const Size(double.infinity, 50),
+      ),
+      child: Text(isJoined ? "Leave Event" : "Join Event"),
+    );
+  }
+
+  void _toggleJoinStatus(String eventId, String userId, bool isJoined) async {
+    final docRef = FirebaseFirestore.instance.collection('events').doc(eventId);
+
+    if (isJoined) {
+      // Remove user from list
+      await docRef.update({
+        'participants': FieldValue.arrayRemove([userId])
+      });
+    } else {
+      // Add user to list
+      await docRef.update({
+        'participants': FieldValue.arrayUnion([userId])
+      });
+    }
   }
 }

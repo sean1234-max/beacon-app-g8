@@ -33,6 +33,13 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
       return;
     }
 
+    if (newPassword.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Password must be at least 6 characters")),
+      );
+      return;
+    }
+
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
