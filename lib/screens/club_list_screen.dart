@@ -1,3 +1,4 @@
+import 'package:assignment/screens/club_chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -148,7 +149,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                       .where('userId', isEqualTo: _currentUserId)
                       .get();
 
-                  if (mounted) {
+                  if (!mounted) return;
                     if (membership.docs.isNotEmpty) {
                       // Already Joined -> Open the Interface
                       Navigator.push(
@@ -165,7 +166,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
                             builder: (context) => ClubDetailsScreen(club: club),
                           ));
                     }
-                  }
                 },
               );
             },
@@ -176,256 +176,460 @@ class _ClubsScreenState extends State<ClubsScreen> {
   }
 
   // --- LAYOUT B: CLUB INTERFACE (Leader & Members View) ---
-  Widget _buildClubManagementInterface(DocumentSnapshot club) {
-    final String leaderId = club['leaderId'];
-    final bool isMeOwner = _currentUserId == leaderId;
+  Widget _buildClubManagementInterface(DocumentSnapshot clubDoc) {
+    final data = clubDoc.data() as Map<String, dynamic>;
+    
+    return Scaffold(
+      backgroundColor: Colors.grey[50], // Light professional background
+      body: CustomScrollView(
+        slivers: [
+          // 1. MODERN HERO HEADER
+          SliverAppBar(
+            expandedHeight: 200,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(data['name'], 
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Replace with a network image if you have a 'coverImage' field
+                  Container(color: AppTheme.primaryBlue), 
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF4F7FA),
-        appBar: AppBar(
-          title: Text(club['name'],
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.white,
-          foregroundColor: AppTheme.primaryBlue,
-          elevation: 0,
-          bottom: const TabBar(
-            labelColor: AppTheme.primaryBlue,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: AppTheme.primaryBlue,
-            tabs: [
-              Tab(icon: Icon(Icons.group), text: "Members"),
-              Tab(icon: Icon(Icons.chat_bubble), text: "Club Chat"),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 2. QUICK STATS ROW
+                  Row(
+                    children: [
+                      _buildStatCard("Members", "124", Icons.people, Colors.blue),
+                      _buildStatCard("Events", "3", Icons.event, Colors.orange),
+                      _buildStatCard("Rank", "#4", Icons.emoji_events, Colors.amber),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  const Text("Management Tools", 
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+
+                  // 3. FEATURE GRID (Clean & Professional)
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.3,
+                    children: [
+                      _buildToolCard(
+                        "Post Update", 
+                        Icons.campaign, // Megaphone icon is great for updates
+                        Colors.orange, 
+                        () {
+                          _showPostUpdateSheet(context, clubDoc.id);
+                        },
+                      ),
+                      _buildToolCard(
+                        "Manage Members", 
+                        Icons.manage_accounts, 
+                        Colors.teal, 
+                        () {
+                          // We extract the leaderId and check ownership from the clubDoc data
+                          final String leaderId = data['leaderId'] ?? '';
+                          final bool isMeOwner = (leaderId == _currentUserId);
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => Scaffold(
+                                backgroundColor: Colors.grey[50],
+                                appBar: AppBar(
+                                  title: const Text("Club Members", style: TextStyle(color: Colors.black)),
+                                  backgroundColor: Colors.white,
+                                  elevation: 0.5,
+                                  iconTheme: const IconThemeData(color: Colors.black),
+                                ),
+                                // NOW PASSING ALL 3 ARGUMENTS:
+                                body: _buildMemberTab(clubDoc, leaderId, isMeOwner), 
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildToolCard(
+                        "Event Planner", 
+                        Icons.calendar_today, 
+                        Colors.indigo, 
+                        () {
+                          _showCreateEventSheet(context, clubDoc.id);
+                        },
+                      ),
+                      _buildToolCard(
+                        "Club Chat", 
+                        Icons.chat_bubble_outline, 
+                        Colors.pink, 
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ClubChatScreen(club: clubDoc),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  const Text("Upcoming Events", 
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+
+                  // EVENT LIST STREAM
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('clubs')
+                        .doc(clubDoc.id)
+                        .collection('events')
+                        .orderBy('date', descending: false) // Show soonest events first
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox();
+                      final events = snapshot.data!.docs;
+
+                      if (events.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(child: Text("No events planned yet.")),
+                        );
+                      }
+
+                      return SizedBox(
+                        height: 160,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: events.length,
+                          itemBuilder: (context, index) {
+                            // 1. Get the DocumentSnapshot (the whole document)
+                            final DocumentSnapshot eventDoc = events[index]; 
+                            
+                            // 2. Pass the DocumentSnapshot directly
+                            // Do NOT call eventDoc.data() here anymore
+                            return _buildEventCard(eventDoc, clubDoc.id, data['leaderId']);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+                  // Place this inside your dashboard's main Column
+                  const Text("Recent Updates", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('clubs')
+                        .doc(clubDoc.id)
+                        .collection('updates')
+                        .orderBy('timestamp', descending: true)
+                        .limit(5) // Just show the last 5
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox();
+                      final updates = snapshot.data!.docs;
+
+                      return Column(
+                        children: updates.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              side: BorderSide(color: Colors.grey[200]!),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListTile(
+                              leading: const CircleAvatar(backgroundColor: Colors.orangeAccent, child: Icon(Icons.campaign, color: Colors.white)),
+                              title: Text(data['content'] ?? ""),
+                              subtitle: Text(
+                                "Posted by ${data['authorName']} • ${data['timestamp'] != null ? (data['timestamp'] as Timestamp).toDate().toString().substring(0, 10) : 'Just now'}",
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventCard(DocumentSnapshot eventDoc, String clubId, String leaderId) {
+    final event = eventDoc.data() as Map<String, dynamic>;
+    final DateTime date = (event['date'] as Timestamp).toDate();
+    final String creatorId = event['creatorId'] ?? '';
+    
+    // PERMISSION LOGIC
+    // Leader can delete everything; Creator can edit/delete their own
+    final bool isCreator = (creatorId == _currentUserId);
+    final bool isLeader = (leaderId == _currentUserId);
+    final bool canManage = isCreator || isLeader;
+
+    return Container(
+      width: 280, // Slightly wider to accommodate time
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // DATE & TIME BADGE
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${date.day}/${date.month} @ ${date.hour}:${date.minute.toString().padLeft(2, '0')}",
+                  style: const TextStyle(color: Colors.indigo, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+              // ACTION MENU (Only if permitted)
+              if (canManage)
+                PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                  onSelected: (value) {
+                    if (value == 'edit' && isCreator) _showEditEventSheet(eventDoc);
+                    if (value == 'delete') _confirmDeleteEvent(clubId, eventDoc.id);
+                  },
+                  itemBuilder: (context) => [
+                    if (isCreator) // Only creator can edit
+                      const PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit, size: 20), title: Text("Edit"), contentPadding: EdgeInsets.zero)),
+                    const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline, color: Colors.red, size: 20), title: Text("Delete", style: TextStyle(color: Colors.red)), contentPadding: EdgeInsets.zero)),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(event['title'] ?? "Untitled", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text(event['description'] ?? "", style: TextStyle(color: Colors.grey[600], fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityItem(String title, String subtitle) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: Colors.blue.withValues(alpha: 0.1),
+        child: const Icon(Icons.notifications_none, size: 20, color: Colors.blue),
+      ),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+    );
+  }
+  // HELPER: Stats Card
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(height: 8),
+              Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            // TAB 1: Member List (with Remove & Transfer)
-            _buildMemberTab(club, leaderId, isMeOwner),
+      ),
+    );
+  }
 
-            // TAB 2: Real-time Chat
-            _buildChatTab(club),
+  // HELPER: Tool Card
+  Widget _buildToolCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(backgroundColor: color.withValues(alpha: 0.1), child: Icon(icon, color: color)),
+            const SizedBox(height: 12),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMemberTab(
-      DocumentSnapshot club, String leaderId, bool isMeOwner) {
+  Widget _buildMemberTab(DocumentSnapshot clubDoc, String leaderId, bool isMeOwner) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('registrations')
-          .where('clubId', isEqualTo: club.id)
+          .where('clubId', isEqualTo: clubDoc.id)
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        if (snapshot.hasError) return const Center(child: Text("Error loading members"));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        
         final members = snapshot.data!.docs;
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: members.length,
-          itemBuilder: (context, index) {
-            final member = members[index];
-            final bool isTargetOwner = member['userId'] == leaderId;
-
-            return Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15)),
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person)),
-                title: Text(member['name'],
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Transfer Button
-                    if (isMeOwner && !isTargetOwner)
-                      IconButton(
-                        icon: const Icon(Icons.swap_horiz, color: Colors.blue),
-                        onPressed: () => _confirmTransfer(
-                            member['userId'], member['name'], club.id),
-                      ),
-                    // REMOVE BUTTON
-                    if (isMeOwner && !isTargetOwner)
-                      IconButton(
-                        icon: const Icon(Icons.person_remove,
-                            color: Colors.redAccent),
-                        onPressed: () =>
-                            _confirmRemoveMember(member.id, member['name']),
-                      ),
-                    if (isTargetOwner) _buildBadge("OWNER", Colors.orange),
-                  ],
-                ),
+        return Column(
+          children: [
+            // 1. TOP INFO SUMMARY
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Row(
+                children: [
+                  const Icon(Icons.groups, color: Colors.blueGrey),
+                  const SizedBox(width: 8),
+                  Text(
+                    "${members.length} Total Members",
+                    style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+            const Divider(height: 1),
+
+            // 2. MEMBER LIST
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: members.length,
+                itemBuilder: (context, index) {
+                  final member = members[index].data() as Map<String, dynamic>;
+                  final String memberDocId = members[index].id;
+                  final bool isTargetOwner = member['userId'] == leaderId;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        )
+                      ],
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: CircleAvatar(
+                        backgroundColor: isTargetOwner ? Colors.orange.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
+                        child: Icon(
+                          isTargetOwner ? Icons.stars : Icons.person,
+                          color: isTargetOwner ? Colors.orange : Colors.blue,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(
+                        member['name'] ?? "Unknown User",
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        isTargetOwner ? "Club Administrator" : "Active Member",
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isTargetOwner)
+                            _buildBadge("OWNER", Colors.orange)
+                          else if (isMeOwner) ...[
+                            // Transfer Ownership Button
+                            IconButton(
+                              tooltip: "Transfer Leadership",
+                              icon: const Icon(Icons.swap_horiz, color: Colors.blue, size: 22),
+                              onPressed: () => _confirmTransfer(
+                                  member['userId'], member['name'], clubDoc.id),
+                            ),
+                            // Kick Member Button
+                            IconButton(
+                              tooltip: "Remove Member",
+                              icon: const Icon(Icons.person_remove_outlined, color: Colors.redAccent, size: 22),
+                              onPressed: () => _confirmRemoveMember(
+                                  memberDocId, member['name']),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
   }
 
-  // Inside your _buildChatTab
-  Widget _buildChatTab(DocumentSnapshot club) {
-    // Use consistent naming (no underscores for local variables)
-    final msgController = TextEditingController();
-
-    void sendMessage() async {
-      final text = msgController.text.trim();
-      if (text.isEmpty) return;
-
-      await FirebaseFirestore.instance.collection('messages').add({
-        'clubId': club.id, // Fixed: uses the club parameter passed to the function
-        'senderId': _currentUserId,
-        'senderName': _currentUserName,
-        'text': text,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      msgController.clear();
-    }
-
-    return Column(
-      children: [
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('messages')
-                .where('clubId', isEqualTo: club.id) // Fixed: clubId -> club.id
-                .orderBy('timestamp', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Text(
-                      "Firestore Error: ${snapshot.error}",
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                );
-              }
-
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final messages = snapshot.data!.docs;
-
-              return ListView.builder(
-                reverse: true,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  final msg = messages[index];
-                  final bool isMe = msg['senderId'] == _currentUserId;
-                  
-                  final DateTime? timestamp = msg['timestamp'] != null 
-                      ? (msg['timestamp'] as Timestamp).toDate() 
-                      : DateTime.now();
-
-                  return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                      children: [
-                        if (!isMe)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8, bottom: 4),
-                            child: Text(
-                              msg['senderName'] ?? "Member",
-                              style: const TextStyle(
-                                fontSize: 12, 
-                                fontWeight: FontWeight.bold, 
-                                color: Colors.blueGrey
-                              ),
-                            ),
-                          ),
-                        Container(
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.7,
-                          ),
-                          margin: const EdgeInsets.symmetric(vertical: 2),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isMe ? AppTheme.primaryBlue : Colors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(18),
-                              topRight: const Radius.circular(18),
-                              bottomLeft: Radius.circular(isMe ? 18 : 0),
-                              bottomRight: Radius.circular(isMe ? 0 : 18),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
-                              )
-                            ],
-                          ),
-                          child: Text(
-                            msg['text'],
-                            style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black87,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2, bottom: 8, left: 4, right: 4),
-                          child: Text(
-                            "${timestamp?.hour}:${timestamp?.minute.toString().padLeft(2, '0')}",
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        // --- Message Input Area ---
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: Colors.white,
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: msgController, // Fixed: removed underscore
-                  onSubmitted: (_) => sendMessage(), // Fixed: calling local sendMessage
-                  decoration: InputDecoration(
-                    hintText: "Type a message...",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                backgroundColor: AppTheme.primaryBlue,
-                child: IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                  onPressed: sendMessage, // Fixed: calling local sendMessage
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+  // Ensure you have this helper method for the "OWNER" badge
+  Widget _buildBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+      ),
     );
   }
 
@@ -540,18 +744,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
     _fetchUserData(); // Refresh local UI state
   }
 
-  // --- UI HELPERS ---
-  Widget _buildBadge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration:
-          BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-      child: Text(text,
-          style: const TextStyle(
-              color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-    );
-  }
-
   Widget _buildClubHeader(String desc) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -646,15 +838,34 @@ class _ClubsScreenState extends State<ClubsScreen> {
                     backgroundColor: AppTheme.primaryBlue,
                     padding: const EdgeInsets.all(15)),
                 onPressed: () async {
+                  // 1. Simple Validation
+                  if (nameController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Please enter a club name")),
+                    );
+                    return;
+                  }
+
+                  // 2. Add to Firestore with 'pending' status
                   await FirebaseFirestore.instance.collection('clubs').add({
                     'name': nameController.text.trim(),
                     'description': descController.text.trim(),
                     'category': selectedCategory,
                     'leaderId': _currentUserId,
-                    'status': 'pending',
+                    'status': 'pending', // This ensures it doesn't show up yet
                     'createdAt': FieldValue.serverTimestamp(),
                   });
-                  Navigator.pop(context);
+
+                  // 3. Close the sheet and show feedback
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Club request sent! Awaiting Admin approval."),
+                        backgroundColor: Colors.orange, // Visual cue for "Pending"
+                      ),
+                    );
+                  }
                 },
                 child: const Text("Launch Club",
                     style: TextStyle(color: Colors.white)),
@@ -667,47 +878,47 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  void _showCreateEventSheet(BuildContext context, String clubId) {
-    final eventNameController = TextEditingController();
+  void _showPostUpdateSheet(BuildContext context, String clubId) {
+    final updateController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 20,
-            right: 20,
-            top: 20),
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20, right: 20, top: 20,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Announce New Event",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
+            const Text("Post Announcement", 
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
             TextField(
-                controller: eventNameController,
-                decoration: const InputDecoration(
-                    labelText: "Event Name", border: OutlineInputBorder())),
+              controller: updateController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: "What's happening in the club?",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+            ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
+              height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.all(15)),
-                onPressed: () async {
-                  await FirebaseFirestore.instance.collection('events').add({
-                    'title': eventNameController.text.trim(),
-                    'clubId': clubId,
-                    'date': DateTime.now(),
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text("Post Event",
-                    style: TextStyle(color: Colors.white)),
+                  backgroundColor: Colors.orange,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => _submitUpdate(context, clubId, updateController.text),
+                child: const Text("Post to Feed", style: TextStyle(color: Colors.white)),
               ),
             ),
             const SizedBox(height: 20),
@@ -715,5 +926,287 @@ class _ClubsScreenState extends State<ClubsScreen> {
         ),
       ),
     );
+  }
+
+  void _showCreateEventSheet(BuildContext context, String clubId) {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => StatefulBuilder( // CRITICAL: This allows the sheet to update!
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 20, right: 20, top: 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Plan New Event", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                TextField(controller: titleController, decoration: const InputDecoration(labelText: "Event Title", border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: descController, decoration: const InputDecoration(labelText: "Description", border: OutlineInputBorder())),
+                
+                // Date & Time Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: ListTile(
+                        title: const Text("Date"),
+                        subtitle: Text("${selectedDate.day}/${selectedDate.month}/${selectedDate.year}"),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null) setModalState(() => selectedDate = date);
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: ListTile(
+                        title: const Text("Time"),
+                        subtitle: Text(selectedTime.format(context)),
+                        onTap: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: selectedTime,
+                          );
+                          if (time != null) setModalState(() => selectedTime = time);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
+                    onPressed: () {
+                      // Combine Date and Time before submitting
+                      final finalDateTime = DateTime(
+                        selectedDate.year, selectedDate.month, selectedDate.day,
+                        selectedTime.hour, selectedTime.minute,
+                      );
+                      _submitEvent(context, clubId, titleController.text, descController.text, finalDateTime,);
+                    },
+                    child: const Text("Create Event", style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _confirmDeleteEvent(String clubId, String eventId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Event?"),
+        content: const Text("This action cannot be undone and will notify members."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('clubs')
+                  .doc(clubId)
+                  .collection('events')
+                  .doc(eventId)
+                  .delete();
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditEventSheet(DocumentSnapshot eventDoc) {
+    final event = eventDoc.data() as Map<String, dynamic>;
+    
+    // Pre-fill controllers with existing data
+    final titleController = TextEditingController(text: event['title']);
+    final descController = TextEditingController(text: event['description']);
+    
+    DateTime selectedDate = (event['date'] as Timestamp).toDate();
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(selectedDate);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 20, right: 20, top: 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Edit Event", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                TextField(controller: titleController, decoration: const InputDecoration(labelText: "Event Title", border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: descController, decoration: const InputDecoration(labelText: "Description", border: OutlineInputBorder())),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: ListTile(
+                        title: const Text("Date"),
+                        subtitle: Text("${selectedDate.day}/${selectedDate.month}/${selectedDate.year}"),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now().subtract(const Duration(days: 30)), // Allow editing past events
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null) setModalState(() => selectedDate = date);
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: ListTile(
+                        title: const Text("Time"),
+                        subtitle: Text(selectedTime.format(context)),
+                        onTap: () async {
+                          final time = await showTimePicker(context: context, initialTime: selectedTime);
+                          if (time != null) setModalState(() => selectedTime = time);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange), // Use orange for "Edit"
+                    onPressed: () {
+                      final finalDateTime = DateTime(
+                        selectedDate.year, selectedDate.month, selectedDate.day,
+                        selectedTime.hour, selectedTime.minute,
+                      );
+                      _updateEvent(eventDoc.reference, titleController.text, descController.text, finalDateTime);
+                    },
+                    child: const Text("Save Changes", style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _updateEvent(DocumentReference ref, String title, String desc, DateTime date) async {
+    try {
+      await ref.update({
+        'title': title.trim(),
+        'description': desc.trim(),
+        'date': Timestamp.fromDate(date),
+        'lastEditedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        Navigator.pop(context); // Close the sheet
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Event updated!"), backgroundColor: Colors.orange),
+        );
+      }
+    } catch (e) {
+      debugPrint("Update Error: $e");
+    }
+  }
+
+  Future<void> _submitUpdate(BuildContext context, String clubId, String content) async {
+    if (content.trim().isEmpty) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('clubs')
+          .doc(clubId)
+          .collection('updates')
+          .add({
+        'content': content.trim(),
+        'authorName': _currentUserName,
+        'authorId': _currentUserId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Announcement posted!"), backgroundColor: Colors.orange),
+        );
+      }
+    } catch (e) {
+      debugPrint("Update Error: $e");
+    }
+  }
+
+  Future<void> _submitEvent(BuildContext context, String clubId, String title, String desc, DateTime date) async {
+    if (title.trim().isEmpty || desc.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    try {
+      // Check console for this log
+      debugPrint("Attempting to upload to Firestore...");
+
+      await FirebaseFirestore.instance
+          .collection('clubs')
+          .doc(clubId)
+          .collection('events') // Ensure this sub-collection exists or can be created
+          .add({
+        'title': title.trim(),
+        'description': desc.trim(),
+        'date': Timestamp.fromDate(date),
+        'createdAt': FieldValue.serverTimestamp(),
+        'creatorId': _currentUserId,
+      });
+
+      if (context.mounted) {
+        Navigator.pop(context); 
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Event Created!"), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      // THIS WILL TELL YOU THE REAL ERROR
+      debugPrint("Firebase Error: $e"); 
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }

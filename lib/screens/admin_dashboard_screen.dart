@@ -167,7 +167,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
         ],
         border: Border(left: BorderSide(color: color, width: 5)), // Color-coded accent
       ),
@@ -203,7 +203,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       label: Text(label),
       style: OutlinedButton.styleFrom(
         foregroundColor: color,
-        side: BorderSide(color: color.withOpacity(0.5)),
+        side: BorderSide(color: color.withValues(alpha: 0.5)),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       ),
     );
@@ -385,7 +385,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       radius: 25,
                       backgroundColor: currentRole == 'admin' 
                           ? Colors.red[50] 
-                          : AppTheme.primaryBlue.withOpacity(0.1),
+                          : AppTheme.primaryBlue.withValues(alpha: 0.1),
                       child: Icon(
                         currentRole == 'admin' ? Icons.admin_panel_settings : Icons.person, 
                         color: currentRole == 'admin' ? Colors.red : AppTheme.primaryBlue,

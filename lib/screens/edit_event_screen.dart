@@ -124,7 +124,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
                     title: Text("Date: ${DateFormat('dd MMM yyyy, hh:mm a').format(_selectedDate)}"),
                     trailing: const Icon(Icons.calendar_month),
                     onTap: _pickDateTime,
-                    tileColor: Colors.blue.withOpacity(0.1),
+                    tileColor: Colors.blue.withValues(alpha: 0.1),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   const SizedBox(height: 30),

@@ -119,7 +119,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10)
                           ],
                         ),
                         child: QrImageView(
@@ -167,7 +167,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
+            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: AppTheme.primaryBlue),

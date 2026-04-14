@@ -73,12 +73,12 @@ class AuthWrapper extends StatelessWidget {
                 if (role == 'admin') {
                   return const AdminDashboardScreen();
                 } else {
-                  return const MainNavigationScreen();
+                  return MainNavigationScreen();
                 }
               }
 
               // Fallback if user doc doesn't exist yet
-              return const MainNavigationScreen();
+              return MainNavigationScreen();
             },
           );
         }

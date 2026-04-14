@@ -145,7 +145,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(4),
-                        color: Colors.blue.withOpacity(0.05),
+                        color: Colors.blue.withValues(alpha: 0.05),
                       ),
                       child: Row(
                         children: [

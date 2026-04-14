@@ -16,7 +16,10 @@ import 'package:table_calendar/table_calendar.dart';
 // lib/screens/home_screen.dart
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  static final GlobalKey<_MainNavigationScreenState> navKey =
+      GlobalKey<_MainNavigationScreenState>();
+
+  MainNavigationScreen() : super(key: navKey);
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -26,6 +29,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   String _searchQuery = "";
   String _userRole = 'student'; // Logic: only 'admin' or 'leader' see the FAB
+
+  void handleExternalSearch(String query, int targetTab) {
+    setState(() {
+      _selectedIndex = targetTab; // Usually your Events tab index
+      _searchQuery = query;
+      _controller.text = query;
+    });
+  }
+
+  final TextEditingController _controller = TextEditingController();
+  @override
+  void dispose() {
+    _controller
+        .dispose(); // Always clean up controllers when the screen is closed
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -68,12 +87,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               decoration: const BoxDecoration(color: AppTheme.primaryBlue),
               currentAccountPicture: const CircleAvatar(
                 backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40, color: AppTheme.primaryBlue),
+                child:
+                    Icon(Icons.person, size: 40, color: AppTheme.primaryBlue),
               ),
               accountName: Text(
                 "${FirebaseAuth.instance.currentUser?.displayName ?? "Student"} (${_userRole.toUpperCase()})",
               ),
-              accountEmail: Text(FirebaseAuth.instance.currentUser?.email ?? ""),
+              accountEmail:
+                  Text(FirebaseAuth.instance.currentUser?.email ?? ""),
             ),
             ListTile(
               leading: const Icon(Icons.home),
@@ -105,14 +126,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ],
       ),
       body: _screens[_selectedIndex],
-      
+
       // The Conditional Logic for the Create Event Button
-      floatingActionButton: _shouldShowFab() 
+      floatingActionButton: _shouldShowFab()
           ? FloatingActionButton.extended(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AddEventScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const AddEventScreen()),
                 );
               },
               backgroundColor: AppTheme.primaryBlue,
@@ -121,17 +143,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               icon: const Icon(Icons.add),
             )
           : null,
-      
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+            // Optional: Clear search when switching tabs manually
+            if (index != 0) _searchQuery = "";
+          });
+        },
         selectedItemColor: AppTheme.primaryBlue,
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
           BottomNavigationBarItem(icon: Icon(Icons.groups), label: "Clubs"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: "Alerts"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.notifications), label: "Alerts"),
         ],
       ),
     );
@@ -139,7 +168,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   // Helper function to keep the build method clean
   bool _shouldShowFab() {
-    return _selectedIndex == 0 && (_userRole == 'admin' || _userRole == 'leader');
+    return _selectedIndex == 0 &&
+        (_userRole == 'admin' || _userRole == 'leader');
   }
 
   Widget _buildSearchField() {
@@ -150,13 +180,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: TextField(
-        onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+        controller: _controller,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value.toLowerCase();
+          });
+        },
         style: const TextStyle(color: Colors.white),
+        // REMOVE 'const' from the line below
         decoration: const InputDecoration(
           hintText: 'Search events...',
           hintStyle: TextStyle(color: Colors.white60),
           prefixIcon: Icon(Icons.search, color: Colors.white60, size: 20),
-          border: InputBorder.none,
+          border: InputBorder.none, // Use this for no border
           contentPadding: EdgeInsets.symmetric(vertical: 10),
         ),
       ),
@@ -167,8 +203,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 class EventListView extends StatelessWidget {
   final String searchQuery;
   final String userRole;
-  const EventListView({super.key, required this.searchQuery, required this.userRole,});
-  
+  const EventListView({
+    super.key,
+    required this.searchQuery,
+    required this.userRole,
+  });
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
@@ -235,16 +274,18 @@ class EventListView extends StatelessWidget {
                             markerBuilder: (context, day, events) {
                               if (events.isNotEmpty) {
                                 return Container(
-                                  margin: const EdgeInsets.all(6.0), 
+                                  margin: const EdgeInsets.all(6.0),
                                   alignment: Alignment.center,
                                   decoration: const BoxDecoration(
-                                    color: AppTheme.primaryBlue, // Solid background
+                                    color: AppTheme
+                                        .primaryBlue, // Solid background
                                     shape: BoxShape.circle,
                                   ),
                                   child: Text(
                                     '${day.day}',
                                     style: const TextStyle(
-                                      color: Colors.white, // White text so it's readable
+                                      color: Colors
+                                          .white, // White text so it's readable
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -388,8 +429,9 @@ class EventListView extends StatelessWidget {
               StreamBuilder<List<Event>>(
                 stream: DatabaseService().getEvents(),
                 builder: (context, snapshot) {
-                  if (snapshot.hasError)
+                  if (snapshot.hasError) {
                     return const Center(child: Text("Error loading events"));
+                  }
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
@@ -428,7 +470,8 @@ class EventListView extends StatelessWidget {
                       // Default to 'student' if data isn't loaded yet or field is missing
                       String role = 'student';
                       if (userSnapshot.hasData && userSnapshot.data!.exists) {
-                        final data = userSnapshot.data!.data() as Map<String, dynamic>;
+                        final data =
+                            userSnapshot.data!.data() as Map<String, dynamic>;
                         role = data['role'] ?? 'student';
                       }
 
@@ -438,25 +481,28 @@ class EventListView extends StatelessWidget {
                         itemCount: filteredEvents.length,
                         itemBuilder: (context, index) {
                           final currentEvent = filteredEvents[index];
-                          
+
                           return EventCard(
                             event: currentEvent,
-                            userRole: role, // Provided role ('admin', 'leader', or 'student')
+                            userRole:
+                                role, // Provided role ('admin', 'leader', or 'student')
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => EventDetailsScreen(event: currentEvent),
+                                  builder: (context) =>
+                                      EventDetailsScreen(event: currentEvent),
                                 ),
                               );
                             },
-                            
+
                             // 1. Implementation of the Edit Logic
                             onEdit: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => EditEventScreen(event: currentEvent),
+                                  builder: (context) =>
+                                      EditEventScreen(event: currentEvent),
                                 ),
                               );
                             },
@@ -467,7 +513,8 @@ class EventListView extends StatelessWidget {
                                 context: context,
                                 builder: (context) => AlertDialog(
                                   title: const Text("Delete Event?"),
-                                  content: const Text("Are you sure? This action cannot be undone."),
+                                  content: const Text(
+                                      "Are you sure? This action cannot be undone."),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(context),
@@ -480,14 +527,18 @@ class EventListView extends StatelessWidget {
                                             .collection('events')
                                             .doc(currentEvent.id)
                                             .delete();
-                                        
+
                                         if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text("Event deleted successfully")),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    "Event deleted successfully")),
                                           );
                                         }
                                       },
-                                      child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                                      child: const Text("Delete",
+                                          style: TextStyle(color: Colors.red)),
                                     ),
                                   ],
                                 ),
