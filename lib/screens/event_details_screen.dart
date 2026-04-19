@@ -1,3 +1,4 @@
+import 'package:assignment/models/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,22 +22,45 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
   void _handleRegistration() async {
-  if (userId == null) return;
-  setState(() => _isRegistering = true);
+    if (userId == null) return;
+    setState(() => _isRegistering = true);
 
-  await DatabaseService().joinEvent(widget.event.id, userId!);
+    try {
+      // 1. Perform the database update
+      await DatabaseService().joinEvent(widget.event.id, userId!);
 
-  if (mounted) {
-    setState(() {
-      _isRegistering = false;
-      // Manually add the ID to the local list to trigger a UI refresh
-      widget.event.participants.add(userId!); 
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Successfully registered!")),
-    );
+      // 2. TRIGGER THE NOTIFICATION
+      // We use widget.event.title to personalize the message
+      await NotificationService.sendNotification(
+        userId: userId!,
+        title: "Event Registered! 🎟️",
+        message: "You have successfully registered for ${widget.event.title}. Your QR pass is now active!",
+        type: "event",
+      );
+
+      if (mounted) {
+        setState(() {
+          _isRegistering = false;
+          // Manually add the ID to the local list to trigger a UI refresh
+          widget.event.participants.add(userId!); 
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Successfully registered! Check your notifications."),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isRegistering = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e")),
+        );
+      }
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {

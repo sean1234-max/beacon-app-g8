@@ -101,8 +101,8 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
     isScrollControlled: true,
     builder: (context) => Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16, right: 16, top: 16),
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 16, right: 16, top: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -113,15 +113,61 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () async {
-              await FirebaseFirestore.instance.collection('events').add({
-                'title': titleController.text,
-                'description': descController.text,
-                'clubId': clubId, 
-                'creatorId': FirebaseAuth.instance.currentUser?.uid,
-                'dateTime': DateTime.now(), 
-                'createdBy': FirebaseAuth.instance.currentUser?.uid,
-              });
-              Navigator.pop(context);
+              String eventTitle = titleController.text.trim();
+              if (eventTitle.isEmpty) return;
+
+              try {
+                // 1. Save the event to Firestore
+                await FirebaseFirestore.instance.collection('events').add({
+                  'title': eventTitle,
+                  'description': descController.text,
+                  'clubId': clubId, 
+                  'creatorId': FirebaseAuth.instance.currentUser?.uid,
+                  'dateTime': DateTime.now(), 
+                  'participants': [], // Initialize empty participants list
+                });
+
+                // 2. FETCH CLUB MEMBERS AND NOTIFY
+                // This assumes your users have an array field called 'joinedClubs'
+                final membersSnapshot = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('joinedClubs', arrayContains: clubId)
+                    .get();
+
+                if (membersSnapshot.docs.isNotEmpty) {
+                  WriteBatch batch = FirebaseFirestore.instance.batch();
+                  
+                  for (var userDoc in membersSnapshot.docs) {
+                    DocumentReference notifRef = FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(userDoc.id)
+                        .collection('notifications')
+                        .doc();
+
+                    batch.set(notifRef, {
+                      'title': "New Club Event! 🎊",
+                      'message': "A new event '$eventTitle' has been posted. Check it out!",
+                      'type': 'event',
+                      'isRead': false,
+                      'timestamp': FieldValue.serverTimestamp(),
+                    });
+                  }
+                  await batch.commit();
+                }
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Event posted and members notified!")),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error: $e")),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
             child: const Text("Post Event", style: TextStyle(color: Colors.white)),

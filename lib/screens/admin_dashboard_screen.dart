@@ -1,3 +1,4 @@
+import 'package:assignment/models/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -515,7 +516,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     ElevatedButton(
-                      onPressed: () => _handleApproval(club.id, 'approved'),
+                      onPressed: () => _handleApproval(
+                        club.id, 
+                        'approved', 
+                        club['name'] ?? 'Unknown Club',   // Sending the club name
+                        club['leaderId'] ?? '',           // Sending the leader's UID
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         visualDensity: VisualDensity.compact,
@@ -523,7 +529,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       child: const Text("Approve", style: TextStyle(color: Colors.white, fontSize: 12)),
                     ),
                     TextButton(
-                      onPressed: () => _showRejectDialog(context, club.id), // Change this
+                      onPressed: () => _showRejectDialog(
+                        context, 
+                        club.id, 
+                        club['name'] ?? 'Unknown Club', 
+                        club['leaderId'] ?? ''
+                      ), 
                       style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                       child: const Text("Reject", style: TextStyle(color: Colors.red, fontSize: 12)),
                     ),
@@ -657,40 +668,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Future<void> _handleApproval(String clubId, String newStatus, {String? reason}) async {
-    try {
-      // 1. Create the update map
-      Map<String, dynamic> updateData = {
-        'status': newStatus,
-        'actionedAt': FieldValue.serverTimestamp(), // Better name than approvedAt if it might be a rejection
-      };
+  // 1. Add clubName and leaderId to the parameters
+  Future<void> _handleApproval(String clubId, String newStatus, String clubName, String leaderId, {String? reason}) async {
+      try {
+        Map<String, dynamic> updateData = {
+          'status': newStatus,
+          'actionedAt': FieldValue.serverTimestamp(),
+        };
 
-      // 2. If it's a rejection, add the reason to the map
-      if (newStatus == 'rejected' && reason != null) {
-        updateData['rejectionReason'] = reason;
-      }
+        if (newStatus == 'rejected' && reason != null) {
+          updateData['rejectionReason'] = reason;
+        }
 
-      // 3. Update Firestore
-      await FirebaseFirestore.instance
-          .collection('clubs')
-          .doc(clubId)
-          .update(updateData);
+        await FirebaseFirestore.instance
+            .collection('clubs')
+            .doc(clubId)
+            .update(updateData);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Club ${newStatus == 'approved' ? 'Approved' : 'Rejected'}!"),
-            backgroundColor: newStatus == 'approved' ? Colors.green : Colors.red,
-          ),
+        // --- NEW NOTIFICATION LOGIC START ---
+        await NotificationService.sendNotification(
+          userId: leaderId, 
+          title: newStatus == 'approved' ? "Club Approved! 🎉" : "Club Application Update",
+          message: newStatus == 'approved' 
+              ? "Congratulations! Your application for $clubName has been approved."
+              : "The application for $clubName was rejected. ${reason ?? ''}",
+          type: newStatus == 'approved' ? "approval" : "rejection",
         );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Club ${newStatus == 'approved' ? 'Approved' : 'Rejected'}!"),
+              backgroundColor: newStatus == 'approved' ? Colors.green : Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Error: $e")),
+          );
+        }
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e")),
-        );
-      }
-    }
   }
 
   Widget _buildUserManagement() {
@@ -911,37 +930,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  void _showRejectDialog(BuildContext context, String clubId) {
-    final TextEditingController reasonController = TextEditingController();
+  // Add clubName and leaderId to the parameters here
+  void _showRejectDialog(BuildContext context, String clubId, String clubName, String leaderId) {
+      final TextEditingController reasonController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Reason for Rejection"),
-        content: TextField(
-          controller: reasonController,
-          decoration: const InputDecoration(
-            hintText: "e.g., Incomplete information...",
-            border: OutlineInputBorder(),
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Reason for Rejection"),
+          content: TextField(
+            controller: reasonController,
+            decoration: const InputDecoration(
+              hintText: "e.g., Incomplete information...",
+              border: OutlineInputBorder(),
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Pass the name and leaderId into the handleApproval call
+                _handleApproval(
+                  clubId, 
+                  'rejected', 
+                  clubName, 
+                  leaderId, 
+                  reason: reasonController.text.trim()
+                );
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text("Confirm Reject", style: TextStyle(color: Colors.white)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Now we call the updated handleApproval with the reason
-              _handleApproval(clubId, 'rejected', reason: reasonController.text.trim());
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Confirm Reject", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+      );
   }
 
   void _confirmDelete(String eventId) async {
@@ -976,19 +1002,56 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
             onPressed: () async {
               if (_controller.text.isNotEmpty) {
-                await FirebaseFirestore.instance.collection('announcements').add({
-                  'message': _controller.text,
-                  'timestamp': FieldValue.serverTimestamp(),
-                  'sender': 'System Admin',
-                });
-                Navigator.pop(context);
-                
-                // Log the broadcast in our new System Logs
-                _logAction("Sent Broadcast Alert", "Global");
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Broadcast sent to all students!")),
-                );
+                String broadcastMsg = _controller.text.trim();
+
+                try {
+                  // 1. Create the Global Announcement record
+                  await FirebaseFirestore.instance.collection('announcements').add({
+                    'message': broadcastMsg,
+                    'timestamp': FieldValue.serverTimestamp(),
+                    'sender': 'System Admin',
+                  });
+
+                  // 2. Prepare the Write Batch for personal notifications
+                  WriteBatch batch = FirebaseFirestore.instance.batch();
+                  
+                  // 3. Get all users
+                  QuerySnapshot usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+
+                  for (var userDoc in usersSnapshot.docs) {
+                    // Create a reference for a new notification document for EACH user
+                    DocumentReference notifRef = FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(userDoc.id)
+                        .collection('notifications')
+                        .doc(); // Generates a random ID
+
+                    batch.set(notifRef, {
+                      'title': "📢 Admin Announcement",
+                      'message': broadcastMsg,
+                      'type': 'broadcast',
+                      'isRead': false,
+                      'timestamp': FieldValue.serverTimestamp(),
+                    });
+                  }
+
+                  // 4. Commit the batch
+                  await batch.commit();
+
+                  if (mounted) {
+                    Navigator.pop(context);
+                    _logAction("Sent Mass Broadcast", "Global");
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Broadcast sent to all students!")),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error sending broadcast: $e")),
+                    );
+                  }
+                }
               }
             },
             child: const Text("Send Now", style: TextStyle(color: Colors.white)),

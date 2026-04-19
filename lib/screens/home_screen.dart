@@ -71,100 +71,117 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Screens list inside build to react to _userRole or _searchQuery changes
-    final List<Widget> _screens = [
-      EventListView(searchQuery: _searchQuery, userRole: _userRole),
-      const ClubsScreen(),
-      const ProfileScreen(),
-      const NotificationsScreen(),
-    ];
+  final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    return Scaffold(
-      drawer: Drawer(
-        child: Column(
-          children: [
-            UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(color: AppTheme.primaryBlue),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child:
-                    Icon(Icons.person, size: 40, color: AppTheme.primaryBlue),
-              ),
-              accountName: Text(
-                "${FirebaseAuth.instance.currentUser?.displayName ?? "Student"} (${_userRole.toUpperCase()})",
-              ),
-              accountEmail:
-                  Text(FirebaseAuth.instance.currentUser?.email ?? ""),
+  // Screens list
+  final List<Widget> _screens = [
+    EventListView(searchQuery: _searchQuery, userRole: _userRole),
+    const ClubsScreen(),
+    const ProfileScreen(),
+    const NotificationsScreen(),
+  ];
+
+  // A reusable StreamBuilder for the notification count
+  Widget _buildNotificationBadge(Widget child) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .snapshots(),
+      builder: (context, snapshot) {
+        int unreadCount = snapshot.data?.docs.length ?? 0;
+        return Badge(
+          isLabelVisible: unreadCount > 0,
+          label: Text('$unreadCount'),
+          child: child,
+        );
+      },
+    );
+  }
+
+  return Scaffold(
+    drawer: Drawer(
+      child: Column(
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(color: AppTheme.primaryBlue),
+            currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, size: 40, color: AppTheme.primaryBlue),
             ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text("Home"),
-              onTap: () => setState(() => _selectedIndex = 0),
+            accountName: Text(
+              "${FirebaseAuth.instance.currentUser?.displayName ?? "Student"} (${_userRole.toUpperCase()})",
             ),
-            const Spacer(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text("Logout"),
-              onTap: () => AuthService().signOut(),
-            ),
-          ],
-        ),
-      ),
-      appBar: AppBar(
-        backgroundColor: AppTheme.primaryBlue,
-        elevation: 4,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: _buildSearchField(),
-        actions: [
-          IconButton(
-            icon: const Badge(
-              label: Text('2'),
-              child: Icon(Icons.notifications, color: Colors.white),
-            ),
-            onPressed: () => setState(() => _selectedIndex = 3),
+            accountEmail: Text(FirebaseAuth.instance.currentUser?.email ?? ""),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text("Home"),
+            onTap: () => setState(() => _selectedIndex = 0),
+          ),
+          const Spacer(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text("Logout"),
+            onTap: () => AuthService().signOut(),
           ),
         ],
       ),
-      body: _screens[_selectedIndex],
-
-      // The Conditional Logic for the Create Event Button
-      floatingActionButton: _shouldShowFab()
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const AddEventScreen()),
-                );
-              },
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: Colors.white,
-              label: const Text("Create Event"),
-              icon: const Icon(Icons.add),
-            )
-          : null,
-
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-            // Optional: Clear search when switching tabs manually
-            if (index != 0) _searchQuery = "";
-          });
-        },
-        selectedItemColor: AppTheme.primaryBlue,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
-          BottomNavigationBarItem(icon: Icon(Icons.groups), label: "Clubs"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.notifications), label: "Alerts"),
-        ],
-      ),
-    );
-  }
+    ),
+    appBar: AppBar(
+      backgroundColor: AppTheme.primaryBlue,
+      elevation: 4,
+      iconTheme: const IconThemeData(color: Colors.white),
+      title: _buildSearchField(),
+      actions: [
+        IconButton(
+          // --- Dynamic Badge in AppBar ---
+          icon: _buildNotificationBadge(const Icon(Icons.notifications, color: Colors.white)),
+          onPressed: () => setState(() => _selectedIndex = 3),
+        ),
+      ],
+    ),
+    body: _screens[_selectedIndex],
+    floatingActionButton: _shouldShowFab()
+        ? FloatingActionButton.extended(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddEventScreen()),
+              );
+            },
+            backgroundColor: AppTheme.primaryBlue,
+            foregroundColor: Colors.white,
+            label: const Text("Create Event"),
+            icon: const Icon(Icons.add),
+          )
+        : null,
+    bottomNavigationBar: BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      onTap: (index) {
+        setState(() {
+          _selectedIndex = index;
+          if (index != 0) _searchQuery = "";
+        });
+      },
+      selectedItemColor: AppTheme.primaryBlue,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed, // Better for 4+ items
+      items: [
+        const BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
+        const BottomNavigationBarItem(icon: Icon(Icons.groups), label: "Clubs"),
+        const BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+        BottomNavigationBarItem(
+          // --- Dynamic Badge in Bottom Nav ---
+          icon: _buildNotificationBadge(const Icon(Icons.notifications)), 
+          label: "Alerts",
+        ),
+      ],
+    ),
+  );
+}
 
   // Helper function to keep the build method clean
   bool _shouldShowFab() {

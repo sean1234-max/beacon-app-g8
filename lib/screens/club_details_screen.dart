@@ -1,3 +1,4 @@
+import 'package:assignment/models/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,7 +13,7 @@ class ClubDetailsScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Check if already a member first
+    // 1. Check if already a member first
     final existing = await FirebaseFirestore.instance
         .collection('registrations')
         .where('clubId', isEqualTo: club.id)
@@ -28,22 +29,44 @@ class ClubDetailsScreen extends StatelessWidget {
       return;
     }
 
+    // 2. Fetch user data for the registration record
     final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
     
+    // 3. Create the registration document
     await FirebaseFirestore.instance.collection('registrations').add({
       'clubId': club.id,
       'userId': user.uid,
       'name': userDoc.data()?['displayName'] ?? "Student",
       'bio': userDoc.data()?['bio'] ?? "APU Student",
       'photoUrl': userDoc.data()?['photoUrl'] ?? "",
-      'role': 'member', // Default role for students
+      'role': 'member',
       'joinedAt': FieldValue.serverTimestamp(),
     });
 
+    // --- NEW NOTIFICATION LOGIC START ---
+
+    // 4. Update the User document with the club ID (for broadcast targeting)
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      'joinedClubs': FieldValue.arrayUnion([club.id])
+    });
+
+    // 5. Send the welcome notification
+    await NotificationService.sendNotification(
+      userId: user.uid,
+      title: "Welcome to ${club.name}! 🌟",
+      message: "You've successfully joined the club. Check your notifications for new updates and events!",
+      type: "approval", // Green checkmark icon
+    );
+
+    // --- NEW NOTIFICATION LOGIC END ---
+
     if (context.mounted) {
-      Navigator.pop(context);
+      // Navigator.pop(context); // Optional: keep this if you want to close the details screen
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Welcome to ${club.name}!")),
+        SnackBar(
+          content: Text("Welcome to ${club.name}!"),
+          backgroundColor: Colors.green,
+        ),
       );
     }
   }

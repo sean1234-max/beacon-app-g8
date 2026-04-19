@@ -1,3 +1,4 @@
+import 'package:assignment/models/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:assignment/theme/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Adjust based on your folder structure
@@ -43,17 +44,40 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        // 1. Update the password in Firebase Auth
         await user.updatePassword(newPassword);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Password updated successfully!")),
+
+        // 2. TRIGGER THE SECURITY NOTIFICATION
+        // This ensures the student has a persistent record of the account change
+        await NotificationService.sendNotification(
+          userId: user.uid,
+          title: "Password Changed 🔐",
+          message: "Your account password was successfully updated. If you did not perform this action, please contact APU IT support immediately.",
+          type: "security",
         );
-        _passwordController.clear();
-        Navigator.pop(context); // Closes the dialog after success
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Password updated successfully!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _passwordController.clear();
+          Navigator.pop(context); // Closes the dialog/screen after success
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
-      );
+      // Note: updatePassword often requires "Recent Login". 
+      // If this fails, the user might need to log out and log back in.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

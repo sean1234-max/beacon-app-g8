@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
@@ -9,51 +11,50 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  // 1. We move the list up here into the State class so it can be modified.
-  // In a real app, this data would eventually come from Firebase!
-  List<Map<String, dynamic>> notifications = [
-    {
-      "title": "New Event in your Area",
-      "subtitle": "The APU Tech Symposium starts in 2 hours at Level 3.",
-      "time": "2h ago",
-      "isRead": false,
-      "icon": Icons.event_available,
-      "color": Colors.blue
-    },
-    {
-      "title": "Club Application Approved",
-      "subtitle": "Congratulations! You are now a member of the APU Robotics Club.",
-      "time": "5h ago",
-      "isRead": false,
-      "icon": Icons.check_circle,
-      "color": Colors.green
-    },
-    {
-      "title": "Assignment Deadline",
-      "subtitle": "Reminder: 'Mobile App Development' assignment is due tomorrow.",
-      "time": "1d ago",
-      "isRead": true,
-      "icon": Icons.assignment_late,
-      "color": Colors.orange
-    },
-  ];
+  final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-  // 2. The Logic: Loop through all items and set isRead to true
-  void _markAllAsRead() {
-    setState(() {
-      for (var item in notifications) {
-        item['isRead'] = true;
+  // Mark all notifications as read in Firestore
+  Future<void> _markAllAsRead() async {
+    if (currentUserId == null) return;
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final snapshots = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      if (snapshots.docs.isEmpty) return; // Nothing to update
+
+      for (var doc in snapshots.docs) {
+        batch.update(doc.reference, {'isRead': true});
       }
-    });
+
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("All notifications marked as read"),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error marking notifications as read: $e");
+    }
   }
 
-  // Optional Logic: Mark a single notification as read when clicked
-  void _markSingleAsRead(int index) {
-    if (!notifications[index]['isRead']) {
-      setState(() {
-        notifications[index]['isRead'] = true;
-      });
-    }
+  // Mark a single notification as read
+  Future<void> _markSingleAsRead(String docId) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .collection('notifications')
+        .doc(docId)
+        .update({'isRead': true});
   }
 
   @override
@@ -64,69 +65,95 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
       ),
-      backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Recent Updates",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  // 3. Connect the button to our logic function
-                  onPressed: _markAllAsRead, 
-                  child: const Text("Mark all as read"),
-                )
-              ],
-            ),
-          ),
-          
+          _buildHeader(),
           Expanded(
-            child: ListView.separated(
-              itemCount: notifications.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final item = notifications[index];
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(currentUserId)
+                  .collection('notifications')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 
-                return Container(
-                  // Unread notifications get a slight blue background
-                  color: item['isRead'] 
-                      ? Colors.transparent 
-                      : AppTheme.primaryBlue.withValues(alpha: 0.05),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: item['color'].withValues(alpha: 0.1),
-                      child: Icon(item['icon'], color: item['color']),
-                    ),
-                    title: Text(
-                      item['title'],
-                      style: TextStyle(
-                        // Unread text is bold, read text is normal
-                        fontWeight: item['isRead'] ? FontWeight.normal : FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item['subtitle']),
-                        const SizedBox(height: 4),
-                        Text(item['time'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
-                    ),
-                    isThreeLine: true,
-                    // 4. Connect the single tap logic
-                    onTap: () => _markSingleAsRead(index),
-                  ),
+                final docs = snapshot.data!.docs;
+                if (docs.isEmpty) return const Center(child: Text("No notifications yet"));
+
+                return ListView.separated(
+                  itemCount: docs.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final String docId = docs[index].id;
+                    
+                    return _notificationItem(docId, data);
+                  },
                 );
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "Recent Updates",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          TextButton(
+            onPressed: _markAllAsRead, 
+            child: const Text("Mark all as read"),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _notificationItem(String docId, Map<String, dynamic> data) {
+    bool isRead = data['isRead'] ?? false;
+    // Map icons based on notification type
+    IconData icon;
+    Color color;
+    switch (data['type']) {
+      case 'approval': 
+        icon = Icons.check_circle; color = Colors.green; break;
+      case 'rejection': 
+        icon = Icons.cancel; color = Colors.red; break;
+      case 'event': 
+        icon = Icons.event_available; color = Colors.blue; break;
+      case 'broadcast': 
+        icon = Icons.campaign; color = Colors.orange; break;
+      case 'security': // Added for Password Resets
+        icon = Icons.security; color = Colors.blueGrey; break;
+      default: 
+        icon = Icons.notifications; color = Colors.grey;
+    }
+
+    return Container(
+      color: isRead ? Colors.transparent : AppTheme.primaryBlue.withValues(alpha: 0.05),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.1),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(
+          data['title'] ?? 'Notification',
+          style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.bold),
+        ),
+        subtitle: Text(data['message'] ?? ''),
+        onTap: () => _markSingleAsRead(docId),
       ),
     );
   }
