@@ -75,29 +75,67 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
         final clubDoc = snapshot.data!.docs.first;
         final String clubName = clubDoc['name'] ?? "";
+        // Get the status from Firestore (default to 'pending' if missing)
+        final String status = clubDoc['status'] ?? 'pending';
 
-        // 2. SAFETY CHECK: If the name is empty, it's a "broken" club.
-        // We show the prompt to create a new one (or you can show an error message).
+        // 2. SAFETY CHECK: If the name is empty
         if (clubName.trim().isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Found a club with no name. Please contact Admin."),
-                ElevatedButton(
-                    onPressed: () => _buildCreateClubPrompt(),
-                    child: const Text("Create Valid Club")),
-              ],
-            ),
-          );
+          return _buildBrokenClubError(); // Your existing broken club logic
         }
 
-        // 3. If the name is valid, proceed to the chat and management interface
-        return _buildClubManagementInterface(clubDoc);
+        // --- NEW STATUS GATEKEEPER ---
+        
+        // 3. If Pending: Show a "Waiting" screen
+        if (status == 'pending') {
+          return _buildPendingApprovalScreen(clubDoc);
+        }
+
+        // 4. If Rejected: Show a "Rejected" screen with an Edit button
+        if (status == 'rejected') {
+          return _buildRejectedScreen(clubDoc);
+        }
+
+        // 5. Only if status is 'approved', proceed to the full interface
+        if (status == 'approved') {
+          return _buildClubManagementInterface(clubDoc);
+        }
+
+        // Fallback in case of unexpected status
+        return _buildPendingApprovalScreen(clubDoc);
       },
     );
   }
 
+  Widget _buildBrokenClubError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.warning_amber_rounded, size: 60, color: Colors.amber),
+            const SizedBox(height: 16),
+            const Text(
+              "Incomplete Club Profile",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "We found your club registration, but some details are missing. Please try creating it again or contact APU support.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => _showCreateClubSheet(context),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+              child: const Text("Re-create Club", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   // --- LAYOUT A: EXPLORE GRID (With Smart Navigation) ---
   Widget _buildExploreLayout() {
     return Scaffold(
@@ -759,6 +797,81 @@ class _ClubsScreenState extends State<ClubsScreen> {
         ],
       ),
     );
+  } 
+
+  Widget _buildPendingApprovalScreen(DocumentSnapshot clubDoc) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(30.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.hourglass_empty_rounded, size: 100, color: Colors.orange),
+              const SizedBox(height: 24),
+              Text(
+                "${clubDoc['name']} is Under Review",
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "Your club registration has been submitted successfully. Please wait for an Admin to approve your request before you can manage events and chat with members.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+              const SizedBox(height: 30),
+              const CircularProgressIndicator(color: Colors.orange),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRejectedScreen(DocumentSnapshot clubDoc) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(30.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.report_problem_rounded, size: 100, color: Colors.red),
+              const SizedBox(height: 24),
+              const Text(
+                "Club Registration Rejected",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  "Reason: ${clubDoc['rejectionReason'] ?? 'No specific reason provided. Please update your details and resubmit.'}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 15, color: Colors.redAccent, fontWeight: FontWeight.w500),
+                ),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                onPressed: () => _showEditClubSheet(context, clubDoc),
+                icon: const Icon(Icons.edit_note, color: Colors.white),
+                label: const Text("Edit & Resubmit", style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildCreateClubPrompt() {
@@ -786,6 +899,111 @@ class _ClubsScreenState extends State<ClubsScreen> {
   }
 
   // --- FORM SHEETS (Moved inside the State class) ---
+  void _showEditClubSheet(BuildContext context, DocumentSnapshot clubDoc) {
+    final TextEditingController nameController =
+        TextEditingController(text: clubDoc['name']);
+    final TextEditingController categoryController =
+        TextEditingController(text: clubDoc['category']);
+    final TextEditingController descController =
+        TextEditingController(text: clubDoc['description']);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Allows the sheet to move up with the keyboard
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom, // Keyboard padding
+          left: 20, right: 20, top: 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Edit Club Details",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                "Please resolve the issues mentioned in the rejection reason.",
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: "Club Name",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: categoryController,
+                decoration: const InputDecoration(
+                  labelText: "Category",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: descController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: "Description",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 25),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      // 2. Update Firestore and RESET status to pending
+                      await FirebaseFirestore.instance
+                          .collection('clubs')
+                          .doc(clubDoc.id)
+                          .update({
+                        'name': nameController.text.trim(),
+                        'category': categoryController.text.trim(),
+                        'description': descController.text.trim(),
+                        'status': 'pending', // Re-triggers Admin review
+                        'updatedAt': FieldValue.serverTimestamp(),
+                      });
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Resubmitted! Waiting for Admin review."),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint("Error resubmitting club: $e");
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text("Resubmit for Approval", 
+                        style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   void _showCreateClubSheet(BuildContext context) {
     final nameController = TextEditingController();

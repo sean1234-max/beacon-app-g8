@@ -15,6 +15,7 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
   int _selectedIndex = 0;
   
   // 1. Add the search query variable here so it persists
@@ -57,6 +58,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 label: Text('Approvals'),
               ),
               NavigationRailDestination(
+                icon: Icon(Icons.event_note_outlined),
+                selectedIcon: Icon(Icons.event_note),
+                label: Text('Events'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(Icons.manage_accounts_outlined),
                 selectedIcon: Icon(Icons.manage_accounts),
                 label: Text('Users'),
@@ -86,8 +92,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     switch (_selectedIndex) {
       case 0: return _buildOverviewStats();
       case 1: return _buildClubApprovals();
-      case 2: return _buildUserManagement();
-      case 3: return _buildLogsView(); // Add a new case for Logs
+      case 2: return _buildEventManagement();
+      case 3: return _buildUserManagement();
+      case 4: return _buildLogsView(); // Add a new case for Logs
       default: return _buildOverviewStats();
     }
   }
@@ -899,38 +906,218 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
   
   Widget _buildEventManagement() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('events').snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Manage All Events", 
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text("As an admin, you can remove events that violate community standards."),
+          const SizedBox(height: 20),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('events').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-        final events = snapshot.data!.docs;
+                final events = snapshot.data!.docs;
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: events.length,
-          itemBuilder: (context, index) {
-            final event = events[index];
-            final data = event.data() as Map<String, dynamic>;
+                return ListView.builder(
+                  itemCount: events.length,
+                  itemBuilder: (context, index) {
+                    final event = events[index];
+                    final Map<String, dynamic> data = event.data() as Map<String, dynamic>;
 
-            return Card(
-              child: ListTile(
-                leading: const Icon(Icons.event, color: Colors.red),
-                title: Text(data['title'] ?? "Untitled Event"),
-                subtitle: Text("Club: ${data['clubName'] ?? 'General'}"),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_sweep, color: Colors.red),
-                  onPressed: () => _confirmDelete(event.id),
-                ),
-              ),
-            );
-          },
-        );
-      },
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: ListTile(
+                        leading: const Icon(Icons.event_note, color: Colors.red),
+                        title: Text(
+                          data.containsKey('title') ? data['title'] : "Untitled Event",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        
+                        // SWITCHED FROM clubName TO description
+                        subtitle: Text(
+                          data.containsKey('description') 
+                              ? data['description'] 
+                              : "No description provided.",
+                          maxLines: 2, // Keeps the card height consistent
+                          overflow: TextOverflow.ellipsis, // Adds "..." if text is too long
+                        ),
+                        onTap: () => _showEventDetails(context, data),
+
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_sweep, color: Colors.red),
+                          onPressed: () => _confirmDelete(event.id),
+                        ),
+                        isThreeLine: true, // Optimizes spacing for longer descriptions
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // Add clubName and leaderId to the parameters here
+  void _showEventDetails(BuildContext context, Map<String, dynamic> data) {
+    // Convert Firestore Timestamp to a readable string if it's not already a string
+    String formattedDateTime = "TBD";
+    if (data['dateTime'] != null) {
+      if (data['dateTime'] is Timestamp) {
+        DateTime dt = (data['dateTime'] as Timestamp).toDate();
+        formattedDateTime = "${dt.day}/${dt.month}/${dt.year} at ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
+      } else {
+        formattedDateTime = data['dateTime'].toString();
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(data['title'] ?? "Event Details"),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _detailRow(Icons.business, "Club ID", data['clubId'] ?? "N/A"),
+              _detailRow(Icons.location_on, "Location", data['location'] ?? "No location"),
+              _detailRow(Icons.calendar_month, "Date & Time", formattedDateTime),
+              _detailRow(Icons.people, "Participants", "${(data['participants'] as List?)?.length ?? 0} joined"),
+              const Divider(),
+              const Text("Description:", style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(data['description'] ?? "No description available."),
+              const SizedBox(height: 16),
+              Text("Created: ${data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate().toString().split('.')[0] : 'Unknown'}",
+                  style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper widget for the rows inside the dialog
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppTheme.primaryBlue),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text("$label: $value", style: const TextStyle(fontSize: 14)),
+          ),
+        ],
+      ),
+    );
+  }
+  Future<void> _confirmDeleteEvent(String eventId, String eventTitle) async {
+  return showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Confirm Deletion"),
+      content: const Text("Are you sure you want to permanently remove this event? This will hide it from all students."),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () async {
+            try {
+              // 1. Fetch event data one last time before deleting
+              DocumentSnapshot doc = await FirebaseFirestore.instance
+                  .collection('events')
+                  .doc(eventId)
+                  .get();
+              
+              if (!doc.exists) return;
+              Map<String, dynamic> eventData = doc.data() as Map<String, dynamic>;
+              
+              String eventTitle = eventData['title'] ?? "Unnamed Event";
+              String creatorId = eventData['creatorId'] ?? "";
+              List<dynamic> participants = eventData['participants'] ?? [];
+
+              // 2. DELETE THE EVENT
+              await FirebaseFirestore.instance.collection('events').doc(eventId).delete();
+
+              // 3. LOG THE ACTIVITY
+              await FirebaseFirestore.instance.collection('logs').add({
+                'action': 'Admin Deleted Event',
+                'details': 'Event "$eventTitle" was removed by Admin.',
+                'targetId': eventId,
+                'timestamp': FieldValue.serverTimestamp(),
+                'adminId': _currentUserId, // Ensure this variable is accessible
+              });
+
+              // 4. NOTIFY THE CREATOR
+              if (creatorId.isNotEmpty) {
+                await _sendNotification(
+                  userId: creatorId,
+                  title: "Event Removed",
+                  body: "Your event '$eventTitle' was removed by the Admin for violating guidelines.",
+                );
+              }
+
+              // 5. NOTIFY ALL PARTICIPANTS
+              for (String uid in participants) {
+                await _sendNotification(
+                  userId: uid,
+                  title: "Event Cancelled",
+                  body: "The event '$eventTitle' you joined has been removed by the Admin.",
+                );
+              }
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Event deleted, logs updated, and users notified.")),
+                );
+              }
+            } catch (e) {
+              debugPrint("Error during cleanup: $e");
+            }
+          },
+          child: const Text("Delete", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
+  
+  Future<void> _sendNotification({
+    required String userId, 
+    required String title, 
+    required String body
+  }) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .add({
+      'title': title,
+      'body': body,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'type': 'admin_action',
+    });
+  }
+
   void _showRejectDialog(BuildContext context, String clubId, String clubName, String leaderId) {
       final TextEditingController reasonController = TextEditingController();
 
