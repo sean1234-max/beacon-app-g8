@@ -54,7 +54,6 @@ class AuthWrapper extends StatelessWidget {
         }
         
         if (snapshot.hasData) {
-          // USER IS LOGGED IN -> Now check their role in Firestore
           return StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('users')

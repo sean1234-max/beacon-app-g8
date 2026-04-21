@@ -15,10 +15,10 @@ class ClubsScreen extends StatefulWidget {
 }
 
 class _ClubsScreenState extends State<ClubsScreen> {
+
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
   String _userRole = 'student';
-  // ADD THIS: Default name to 'Student' while loading
-  String _currentUserName = 'Student'; 
+  String _currentUserName = 'Student';
 
   @override
   void initState() {
@@ -49,59 +49,110 @@ class _ClubsScreenState extends State<ClubsScreen> {
     }
   }
 
+  Future<void> _sendNotification({
+    required String userId,
+    required String title,
+    required String body, // You can keep the parameter name 'body'
+  }) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .add({
+      'title': title,
+      'message': body, // CHANGE 'body' TO 'message' HERE
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'type': 'removal', // Added a type so you can give it a specific icon!
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
-    // 1. Students or Admins see the Explore Layout
+    // 1. Regular Student View
     if (_userRole != 'club_leader') {
       return _buildExploreLayout();
     }
 
-    // 2. Club Leaders check if they own a club
+    // 2. Club Leader Dashboard
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Leader Dashboard"),
+          backgroundColor: Colors.white,
+          foregroundColor: AppTheme.primaryBlue,
+          elevation: 0,
+          bottom: const TabBar(
+            labelColor: AppTheme.primaryBlue,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: AppTheme.primaryBlue,
+            tabs: [
+              Tab(icon: Icon(Icons.dashboard_rounded), text: "My Club"),
+              Tab(icon: Icon(Icons.search), text: "Explore"),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // TAB 1: YOUR EXISTING MANAGEMENT STREAM
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('clubs')
+                  .where('leaderId', isEqualTo: _currentUserId)
+                  .limit(1)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return _buildCreateClubPrompt();
+                }
+
+                final clubDoc = snapshot.data!.docs.first;
+                final String status = clubDoc['status'] ?? 'pending';
+
+                if (status == 'pending') return _buildPendingApprovalScreen(clubDoc);
+                if (status == 'rejected') return _buildRejectedScreen(clubDoc);
+                
+                return _buildClubManagementInterface(clubDoc);
+              },
+            ),
+
+            // TAB 2: THE REUSABLE EXPLORE CONTENT
+            _buildExploreContent(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExploreLayoutBodyOnly() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('clubs')
-          .where('leaderId', isEqualTo: _currentUserId)
-          .limit(1)
+          .where('status', isEqualTo: 'approved')
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final clubs = snapshot.data!.docs;
 
-        // 1. Check if the leader actually has any clubs
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildCreateClubPrompt();
-        }
-
-        final clubDoc = snapshot.data!.docs.first;
-        final String clubName = clubDoc['name'] ?? "";
-        // Get the status from Firestore (default to 'pending' if missing)
-        final String status = clubDoc['status'] ?? 'pending';
-
-        // 2. SAFETY CHECK: If the name is empty
-        if (clubName.trim().isEmpty) {
-          return _buildBrokenClubError(); // Your existing broken club logic
-        }
-
-        // --- NEW STATUS GATEKEEPER ---
-        
-        // 3. If Pending: Show a "Waiting" screen
-        if (status == 'pending') {
-          return _buildPendingApprovalScreen(clubDoc);
-        }
-
-        // 4. If Rejected: Show a "Rejected" screen with an Edit button
-        if (status == 'rejected') {
-          return _buildRejectedScreen(clubDoc);
-        }
-
-        // 5. Only if status is 'approved', proceed to the full interface
-        if (status == 'approved') {
-          return _buildClubManagementInterface(clubDoc);
-        }
-
-        // Fallback in case of unexpected status
-        return _buildPendingApprovalScreen(clubDoc);
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 15,
+            mainAxisSpacing: 15,
+            childAspectRatio: 0.8,
+          ),
+          itemCount: clubs.length,
+          itemBuilder: (context, index) {
+            // ... copy your existing ClubCard logic from _buildExploreLayout here ...
+            // ... mapping to Club object and returning ClubCard ...
+          },
+        );
       },
     );
   }
@@ -136,80 +187,80 @@ class _ClubsScreenState extends State<ClubsScreen> {
       ),
     );
   }
-  // --- LAYOUT A: EXPLORE GRID (With Smart Navigation) ---
+   
   Widget _buildExploreLayout() {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
-        title: const Text("Explore Clubs",
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Explore Clubs", style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         foregroundColor: AppTheme.primaryBlue,
         elevation: 0,
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('clubs')
-            .where('status', isEqualTo: 'approved') 
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final clubs = snapshot.data!.docs;
+      body: _buildExploreContent(), // We moved the logic here
+    );
+  }
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-              childAspectRatio: 0.8,
-            ),
-            itemCount: clubs.length,
-            itemBuilder: (context, index) {
-              final clubDoc = clubs[index];
-              final club = Club(
-                id: clubDoc.id,
-                name: clubDoc['name'],
-                category: clubDoc['category'],
-                description: clubDoc['description'],
-                leaderId: clubDoc['leaderId'],
-              );
+  // This is the REUSABLE part for the Leader's Tab
+  Widget _buildExploreContent() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('clubs')
+          .where('status', isEqualTo: 'approved')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        
+        final clubs = snapshot.data!.docs;
 
-              return ClubCard(
-                club: club,
-                onTap: () async {
-                  // Check if this student is already a member
-                  final membership = await FirebaseFirestore.instance
-                      .collection('registrations')
-                      .where('clubId', isEqualTo: club.id)
-                      .where('userId', isEqualTo: _currentUserId)
-                      .get();
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 15,
+            mainAxisSpacing: 15,
+            childAspectRatio: 0.8,
+          ),
+          itemCount: clubs.length,
+          itemBuilder: (context, index) {
+            final clubDoc = clubs[index];
+            final data = clubDoc.data() as Map<String, dynamic>; // Safe casting
 
-                  if (!mounted) return;
-                    if (membership.docs.isNotEmpty) {
-                      // Already Joined -> Open the Interface
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                _buildClubManagementInterface(clubDoc),
-                          ));
-                    } else {
-                      // Not Joined -> Open Details/Join Screen
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ClubDetailsScreen(club: club),
-                          ));
-                    }
-                },
-              );
-            },
-          );
-        },
-      ),
+            final club = Club(
+              id: clubDoc.id,
+              name: data['name'] ?? "Unknown",
+              category: data['category'] ?? "General",
+              description: data['description'] ?? "",
+              leaderId: data['leaderId'] ?? "",
+            );
+
+            return ClubCard(
+              club: club,
+              onTap: () async {
+                final membership = await FirebaseFirestore.instance
+                    .collection('registrations')
+                    .where('clubId', isEqualTo: club.id)
+                    .where('userId', isEqualTo: _currentUserId)
+                    .get();
+
+                if (!mounted) return;
+
+                if (membership.docs.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => _buildClubManagementInterface(clubDoc)),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ClubDetailsScreen(club: club)),
+                  );
+                }
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -253,13 +304,45 @@ class _ClubsScreenState extends State<ClubsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 2. QUICK STATS ROW
-                  Row(
-                    children: [
-                      _buildStatCard("Members", "124", Icons.people, Colors.blue),
-                      _buildStatCard("Events", "3", Icons.event, Colors.orange),
-                      _buildStatCard("Rank", "#4", Icons.emoji_events, Colors.amber),
-                    ],
+                  // 2. DYNAMIC QUICK STATS ROW
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('clubs')
+                        .doc(clubDoc.id)
+                        .collection('events')
+                        .snapshots(),
+                    builder: (context, eventSnapshot) {
+                      // Get total events
+                      int eventCount = eventSnapshot.data?.docs.length ?? 0;
+                      
+                      // Get total members from the 'members' array in the club document
+                      // (Assuming your clubDoc data has a 'members' list)
+                      List membersList = data['members'] ?? [];
+                      int memberCount = membersList.length;
+
+                      return Row(
+                        children: [
+                          _buildStatCard(
+                            "Members", 
+                            memberCount.toString(), 
+                            Icons.people, 
+                            Colors.blue
+                          ),
+                          _buildStatCard(
+                            "Events", 
+                            eventCount.toString(), 
+                            Icons.event, 
+                            Colors.orange
+                          ),
+                          _buildStatCard(
+                            "Active Now", // Replaced 'Rank' with something more dynamic
+                            "High", 
+                            Icons.bolt, 
+                            Colors.purple
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   
                   const SizedBox(height: 24),
@@ -401,6 +484,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                       return Column(
                         children: updates.map((doc) {
                           final data = doc.data() as Map<String, dynamic>;
+                          bool isWelcomeMessage = data['content'].toString().contains("Welcome");
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
                             elevation: 0,
@@ -409,11 +493,22 @@ class _ClubsScreenState extends State<ClubsScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ListTile(
-                              leading: const CircleAvatar(backgroundColor: Colors.orangeAccent, child: Icon(Icons.campaign, color: Colors.white)),
-                              title: Text(data['content'] ?? ""),
+                              leading: CircleAvatar(
+                                // Change color based on message type
+                                backgroundColor: isWelcomeMessage ? Colors.blueAccent : Colors.orangeAccent, 
+                                child: Icon(
+                                  isWelcomeMessage ? Icons.person_add : Icons.campaign, 
+                                  color: Colors.white,
+                                  size: 20,
+                                )
+                              ),
+                              title: Text(
+                                data['content'] ?? "",
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
                               subtitle: Text(
-                                "Posted by ${data['authorName']} • ${data['timestamp'] != null ? (data['timestamp'] as Timestamp).toDate().toString().substring(0, 10) : 'Just now'}",
-                                style: const TextStyle(fontSize: 11),
+                                "${data['authorName']} • ${_formatTimestamp(data['timestamp'])}",
+                                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                               ),
                             ),
                           );
@@ -428,6 +523,12 @@ class _ClubsScreenState extends State<ClubsScreen> {
         ],
       ),
     );
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return "Just now";
+    DateTime date = (timestamp as Timestamp).toDate();
+    return "${date.day}/${date.month}/${date.year}";
   }
 
   Widget _buildEventCard(DocumentSnapshot eventDoc, String clubId, String leaderId) {
@@ -550,6 +651,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
   }
 
   Widget _buildMemberTab(DocumentSnapshot clubDoc, String leaderId, bool isMeOwner) {
+    final String clubName = clubDoc['name'] ?? "Club";
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('registrations')
@@ -563,7 +666,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
         return Column(
           children: [
-            // 1. TOP INFO SUMMARY
+            // Info Summary Header
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.white,
@@ -580,71 +683,18 @@ class _ClubsScreenState extends State<ClubsScreen> {
             ),
             const Divider(height: 1),
 
-            // 2. MEMBER LIST
+            // Member List using the Tile helper
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 itemCount: members.length,
                 itemBuilder: (context, index) {
-                  final member = members[index].data() as Map<String, dynamic>;
-                  final String memberDocId = members[index].id;
-                  final bool isTargetOwner = member['userId'] == leaderId;
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        )
-                      ],
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: CircleAvatar(
-                        backgroundColor: isTargetOwner ? Colors.orange.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
-                        child: Icon(
-                          isTargetOwner ? Icons.stars : Icons.person,
-                          color: isTargetOwner ? Colors.orange : Colors.blue,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(
-                        member['name'] ?? "Unknown User",
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        isTargetOwner ? "Club Administrator" : "Active Member",
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isTargetOwner)
-                            _buildBadge("OWNER", Colors.orange)
-                          else if (isMeOwner) ...[
-                            // Transfer Ownership Button
-                            IconButton(
-                              tooltip: "Transfer Leadership",
-                              icon: const Icon(Icons.swap_horiz, color: Colors.blue, size: 22),
-                              onPressed: () => _confirmTransfer(
-                                  member['userId'], member['name'], clubDoc.id),
-                            ),
-                            // Kick Member Button
-                            IconButton(
-                              tooltip: "Remove Member",
-                              icon: const Icon(Icons.person_remove_outlined, color: Colors.redAccent, size: 22),
-                              onPressed: () => _confirmRemoveMember(
-                                  memberDocId, member['name']),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                  // Call the helper function here!
+                  return _buildMemberTile(
+                    members[index], // The DocumentSnapshot
+                    leaderId, 
+                    clubDoc.id, 
+                    clubName
                   );
                 },
               ),
@@ -672,37 +722,72 @@ class _ClubsScreenState extends State<ClubsScreen> {
   }
 
   // Remove Member Function
-  Future<void> _confirmRemoveMember(String registrationId, String name) async {
-    bool? confirm = await showDialog(
+  Future<void> _confirmRemoveMember(
+      String memberDocId, 
+      String name, 
+      String targetUserId, 
+      String clubName, 
+      String clubDocId // Using the name defined here
+    ) async {
+    
+    bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Remove Member?"),
-        content: Text("Are you sure you want to remove $name from the club?"),
+        content: Text("Are you sure you want to remove $name from $clubName?"),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Remove"),
+            child: const Text("Remove", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
-      await FirebaseFirestore.instance
-          .collection('registrations')
-          .doc(registrationId)
-          .delete();
-    }
-  }
+      if (confirm == true) {
+        try {
+          await _sendNotification(
+            userId: targetUserId,
+            title: "Membership Update",
+            body: "You have been removed from $clubName.",
+          );
 
+          // FIX: Use 'memberDocId' because that is the name in your parameter list
+          await FirebaseFirestore.instance
+              .collection('registrations')
+              .doc(memberDocId) 
+              .delete();
+
+          // FIX: Use 'clubDocId' because that is the name in your parameter list
+          await FirebaseFirestore.instance
+              .collection('clubs')
+              .doc(clubDocId) 
+              .update({
+            'members': FieldValue.arrayRemove([targetUserId])
+          });
+
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(targetUserId)
+              .update({
+            'joinedClubs': FieldValue.arrayRemove([clubDocId])
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("$name removed.")),
+            );
+          }
+        } catch (e) {
+          debugPrint("Error: $e");
+        }
+      }
+    }
   // --- MEMBER TILE WITH OWNER BADGE & TRANSFER ---
-  Widget _buildMemberTile(
-      DocumentSnapshot member, String leaderId, String clubId) {
-    final bool isOwner = member['userId'] == leaderId;
+  Widget _buildMemberTile(DocumentSnapshot member, String leaderId, String clubId, String clubName) {
+    final bool isTargetOwner = member['userId'] == leaderId;
     final bool isMeOwner = _currentUserId == leaderId;
 
     return Container(
@@ -710,31 +795,66 @@ class _ClubsScreenState extends State<ClubsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: isOwner ? Border.all(color: Colors.orange, width: 2) : null,
+        border: isTargetOwner ? Border.all(color: Colors.orange, width: 2) : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+          ),
+        ],
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundImage: member['photoUrl'] != ""
+          backgroundImage: (member['photoUrl'] != null && member['photoUrl'] != "")
               ? NetworkImage(member['photoUrl'])
               : null,
-          child: member['photoUrl'] == "" ? const Icon(Icons.person) : null,
+          child: (member['photoUrl'] == null || member['photoUrl'] == "") 
+              ? const Icon(Icons.person) 
+              : null,
         ),
         title: Row(
           children: [
-            Text(member['name'],
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            if (isOwner) ...[
+            Expanded( // Added Expanded to prevent text overflow
+              child: Text(member['name'] ?? "Unknown",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis),
+            ),
+            if (isTargetOwner) ...[
               const SizedBox(width: 8),
               _buildBadge("OWNER", Colors.orange),
             ],
           ],
         ),
-        subtitle: Text(member['bio'], maxLines: 1),
-        trailing: (isMeOwner && !isOwner)
-            ? IconButton(
-                icon: const Icon(Icons.swap_horiz, color: AppTheme.primaryBlue),
-                onPressed: () =>
-                    _confirmTransfer(member['userId'], member['name'], clubId),
+        subtitle: Text(member['bio'] ?? "No bio available", maxLines: 1),
+        trailing: (isMeOwner && !isTargetOwner)
+            ? Row(
+                mainAxisSize: MainAxisSize.min, // Critical: keeps the Row compact
+                children: [
+                  // Transfer Button
+                  IconButton(
+                    tooltip: "Transfer Leadership",
+                    icon: const Icon(Icons.swap_horiz, color: AppTheme.primaryBlue, size: 22),
+                    onPressed: () => _confirmTransfer(
+                      member['userId'], 
+                      member['name'], 
+                      clubId,
+                      clubName, // Make sure to pass the name for notifications
+                    ),
+                  ),
+                  // Remove Member Button
+                  IconButton(
+                    tooltip: "Remove Member",
+                    icon: const Icon(Icons.person_remove_outlined, color: Colors.redAccent, size: 22),
+                    onPressed: () => _confirmRemoveMember(
+                      member.id,       // Variable 1: You defined this as members[index].id
+                      member['name'],    // Variable 2
+                      member['userId'],  // Variable 3
+                      clubName,          // Variable 4: Defined at the top of _buildMemberTab
+                      clubId,        // Variable 5: The ID of the club
+                    ),
+                  ),
+                ],
               )
             : null,
       ),
@@ -742,22 +862,22 @@ class _ClubsScreenState extends State<ClubsScreen> {
   }
 
   // --- OWNERSHIP TRANSFER LOGIC ---
-  Future<void> _confirmTransfer(
-      String newId, String newName, String clubId) async {
+  // Update the signature to include String clubName
+  Future<void> _confirmTransfer(String newId, String newName, String clubId, String clubName) async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Transfer Ownership?"),
-        content: Text(
-            "Make $newName the new owner? You will become a regular student."),
+        content: Text("Make $newName the new owner of $clubName? You will become a regular student."),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel")),
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _executeTransfer(newId, clubId);
+              _executeTransfer(newId, clubId, clubName); // Pass it here too
             },
             child: const Text("Confirm"),
           ),
@@ -766,20 +886,80 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  Future<void> _executeTransfer(String newId, String clubId) async {
-    await FirebaseFirestore.instance
-        .collection('clubs')
-        .doc(clubId)
-        .update({'leaderId': newId});
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(_currentUserId)
-        .update({'role': 'student'});
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(newId)
-        .update({'role': 'club_leader'});
-    _fetchUserData(); // Refresh local UI state
+  Future<void> _executeTransfer(String newId, String clubId, String clubName) async {
+    try {
+      // 1. Update the Club Document
+      await FirebaseFirestore.instance
+          .collection('clubs')
+          .doc(clubId)
+          .update({'leaderId': newId});
+
+      // 2. Update Roles in Users Collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUserId) // Old leader
+          .update({'role': 'student'});
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(newId) // New leader
+          .update({'role': 'club_leader'});
+      
+      // Update new leader's registration
+      final newLeaderReg = await FirebaseFirestore.instance
+          .collection('registrations')
+          .where('clubId', isEqualTo: clubId)
+          .where('userId', isEqualTo: newId)
+          .get();
+      
+      if (newLeaderReg.docs.isNotEmpty) {
+        await newLeaderReg.docs.first.reference.update({'role': 'leader'});
+      }
+
+      // Update old leader's (your) registration
+      final oldLeaderReg = await FirebaseFirestore.instance
+          .collection('registrations')
+          .where('clubId', isEqualTo: clubId)
+          .where('userId', isEqualTo: _currentUserId)
+          .get();
+
+      if (oldLeaderReg.docs.isNotEmpty) {
+        await oldLeaderReg.docs.first.reference.update({'role': 'member'});
+      }
+
+      // 3. SEND NOTIFICATION TO THE NEW LEADER
+      await _sendNotification(
+        userId: newId,
+        title: "New Responsibility! 👑",
+        body: "You have been promoted to the Club Administrator of $clubName.",
+      );
+
+      // 4. Update the Club's "Recent Updates" Feed
+      await FirebaseFirestore.instance
+          .collection('clubs')
+          .doc(clubId)
+          .collection('updates')
+          .add({
+        'content': 'Leadership has been transferred. Please welcome your new Administrator! 🎊',
+        'authorName': 'System',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      _fetchUserData(); 
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Leadership transferred successfully!")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Transfer failed: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Widget _buildClubHeader(String desc) {
@@ -1428,3 +1608,4 @@ class _ClubsScreenState extends State<ClubsScreen> {
     }
   }
 }
+

@@ -79,56 +79,11 @@ class ClubLeaderDashboard extends StatelessWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateClubSheet(context),
-        label: const Text("Create Club"),
-        icon: const Icon(Icons.add),
-        backgroundColor: AppTheme.primaryBlue,
-      ),
     );
   }
 }
 
-void _showCreateClubSheet(BuildContext context) {
-  final nameController = TextEditingController();
-  final categoryController = TextEditingController();
-  final descController = TextEditingController();
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16, right: 16, top: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text("Register New Club", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
-          TextField(controller: nameController, decoration: const InputDecoration(labelText: "Club Name")),
-          TextField(controller: categoryController, decoration: const InputDecoration(labelText: "Category (e.g. Sports)")),
-          TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () async {
-              await FirebaseFirestore.instance.collection('clubs').add({
-                'name': nameController.text,
-                'category': categoryController.text,
-                'description': descController.text,
-                'leaderId': FirebaseAuth.instance.currentUser?.uid,
-                'status': 'pending', 
-                'createdAt': FieldValue.serverTimestamp(),
-              });
-              Navigator.pop(context);
-            },
-            child: const Text("Create Club"),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    ),
-  );
-}
 
 void _showCreateEventSheet(BuildContext context, String clubId) {
   final titleController = TextEditingController();

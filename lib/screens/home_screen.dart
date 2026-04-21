@@ -50,6 +50,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _fetchUserRole();
+    checkAndNotifyExpiredEvents();
   }
 
   void _fetchUserRole() async {
@@ -66,6 +67,86 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           _userRole = doc.data()?['role'] ?? 'student';
         });
       }
+    }
+  }
+
+    Future<void> checkAndNotifyExpiredEvents() async {
+      final now = DateTime.now();
+      
+      try {
+        // Simplified Query: Just get events that have passed
+        final expiredQuery = await FirebaseFirestore.instance
+            .collection('events')
+            .where('dateTime', isLessThan: now) 
+            .get();
+
+        for (var doc in expiredQuery.docs) {
+          final data = doc.data();
+          
+          // Safety Check: If we already notified for this event, skip it
+          // This works even if the field is missing (null != true)
+          if (data['isExpiredNotified'] == true) continue;
+
+          final String eventId = doc.id;
+          final String eventTitle = data['title'] ?? "Untitled Event";
+          final String creatorId = data['creatorId'] ?? "";
+          final List<dynamic> participants = data['participants'] ?? [];
+
+          // Notify Creator
+          if (creatorId.isNotEmpty) {
+            await _sendNotification(
+              userId: creatorId,
+              title: "Event Completed",
+              body: "Your event '$eventTitle' has ended. Thank you for hosting!",
+            );
+          }
+
+          // Notify Participants
+          for (String uid in participants) {
+            await _sendNotification(
+              userId: uid,
+              title: "Event Ended",
+              body: "We hope you enjoyed '$eventTitle'!",
+            );
+          }
+
+          // Mark as notified in the database
+          await FirebaseFirestore.instance.collection('events').doc(eventId).update({
+            'isExpiredNotified': true,
+          });
+        }
+      } catch (e) {
+        debugPrint("Notification Error: $e");
+        // This catch prevents the "Yellow Highlight" crash in VS Code
+      }
+    }
+
+  Future<void> _sendNotification({
+    required String userId, 
+    required String title, 
+    required String body,
+    String type = 'info', // Added a default type
+  }) async {
+    // Guard clause: Don't try to send a notification to a non-existent ID
+    if (userId.isEmpty) {
+      debugPrint("Notification Error: userId is empty.");
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .add({
+        'title': title,
+        'body': body,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'type': type, // Helpful for UI styling later
+      });
+    } catch (e) {
+      debugPrint("Failed to send notification: $e");
     }
   }
 
@@ -454,17 +535,24 @@ class EventListView extends StatelessWidget {
                   }
 
                   // --- SEARCH FILTER LOGIC START ---
+                  // --- SEARCH & EXPIRED FILTER LOGIC ---
                   final allEvents = snapshot.data ?? [];
+                  final now = DateTime.now(); // Current time
 
-                  // This filters the events based on what you type in the search bar
                   final filteredEvents = allEvents.where((event) {
+                    // 1. Check if the event date is in the future
+                    final isNotExpired = event.dateTime.isAfter(now);
+
+                    // 2. Your existing Search Logic
                     final titleMatch = event.title
                         .toLowerCase()
                         .contains(searchQuery.toLowerCase());
                     final locationMatch = event.location
                         .toLowerCase()
                         .contains(searchQuery.toLowerCase());
-                    return titleMatch || locationMatch;
+
+                    // Return true ONLY if it matches the search AND is not expired
+                    return isNotExpired && (titleMatch || locationMatch);
                   }).toList();
                   // --- SEARCH FILTER LOGIC END ---
 

@@ -675,48 +675,95 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  // 1. Add clubName and leaderId to the parameters
   Future<void> _handleApproval(String clubId, String newStatus, String clubName, String leaderId, {String? reason}) async {
-      try {
-        Map<String, dynamic> updateData = {
-          'status': newStatus,
-          'actionedAt': FieldValue.serverTimestamp(),
-        };
+    try {
+      Map<String, dynamic> updateData = {
+        'status': newStatus,
+        'actionedAt': FieldValue.serverTimestamp(),
+      };
 
-        if (newStatus == 'rejected' && reason != null) {
-          updateData['rejectionReason'] = reason;
+      if (newStatus == 'rejected' && reason != null) {
+        updateData['rejectionReason'] = reason;
+      }
+
+      // 1. Update the Club Document
+      if (newStatus == 'approved') {
+        // Initialize members array with the leaderId
+        updateData['members'] = FieldValue.arrayUnion([leaderId]);
+      }
+
+      await FirebaseFirestore.instance
+          .collection('clubs')
+          .doc(clubId)
+          .update(updateData);
+
+      // 2. LOGIC FOR SUCCESSFUL APPROVAL
+      if (newStatus == 'approved') {
+        // Fetch leader's details from 'users' collection
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(leaderId).get();
+        
+        if (!userDoc.exists) {
+          throw "Leader user document not found in 'users' collection!";
         }
 
+        final userData = userDoc.data() as Map<String, dynamic>;
+        final String leaderName = userData['displayName'] ?? "Club Leader";
+
+        // 3. CREATE THE REGISTRATION RECORD
+        // CRITICAL: Ensure 'userId' matches exactly what your Member List screen queries!
+        await FirebaseFirestore.instance.collection('registrations').add({
+          'clubId': clubId,
+          'userId': leaderId, 
+          'name': leaderName,
+          'role': 'leader',
+          'joinedAt': FieldValue.serverTimestamp(),
+          'bio': userData['bio'] ?? "Club Administrator",
+          'photoUrl': userData['photoUrl'] ?? "",
+        });
+
+        // 4. Update Leader's user document
+        await FirebaseFirestore.instance.collection('users').doc(leaderId).update({
+          'joinedClubs': FieldValue.arrayUnion([clubId])
+        });
+        
+        // 5. System Update for the feed
         await FirebaseFirestore.instance
             .collection('clubs')
             .doc(clubId)
-            .update(updateData);
-
-        // --- NEW NOTIFICATION LOGIC START ---
-        await NotificationService.sendNotification(
-          userId: leaderId, 
-          title: newStatus == 'approved' ? "Club Approved! 🎉" : "Club Application Update",
-          message: newStatus == 'approved' 
-              ? "Congratulations! Your application for $clubName has been approved."
-              : "The application for $clubName was rejected. ${reason ?? ''}",
-          type: newStatus == 'approved' ? "approval" : "rejection",
-        );
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Club ${newStatus == 'approved' ? 'Approved' : 'Rejected'}!"),
-              backgroundColor: newStatus == 'approved' ? Colors.green : Colors.red,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error: $e")),
-          );
-        }
+            .collection('updates')
+            .add({
+          'content': '$clubName has officially started! 🚀 Welcome our leader, $leaderName.',
+          'authorName': 'System',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
       }
+
+      // --- NOTIFICATION LOGIC ---
+      await NotificationService.sendNotification(
+        userId: leaderId, 
+        title: newStatus == 'approved' ? "Club Approved! 🎉" : "Club Application Update",
+        message: newStatus == 'approved' 
+            ? "Congratulations! Your application for $clubName has been approved."
+            : "The application for $clubName was rejected. ${reason ?? ''}",
+        type: newStatus == 'approved' ? "approval" : "rejection",
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Club ${newStatus == 'approved' ? 'Approved' : 'Rejected'}!"),
+            backgroundColor: newStatus == 'approved' ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Approval Error: $e"); // Logs the error to your console
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.orange),
+        );
+      }
+    }
   }
 
   Widget _buildUserManagement() {

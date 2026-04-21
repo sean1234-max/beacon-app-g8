@@ -64,7 +64,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Note: If you renamed participants in your model to attendees, change this line
+    bool isExpired = widget.event.dateTime.isBefore(DateTime.now());
     bool isAlreadyRegistered = widget.event.participants.contains(userId);
     
     return Scaffold(
@@ -100,13 +100,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   
                   // Status Chip
                   Chip(
-                    label: Text(
-                      isAlreadyRegistered ? "Registered" : "Available",
-                      style: const TextStyle(color: Colors.white),
+                      label: Text(
+                        isExpired 
+                            ? "Expired" 
+                            : (isAlreadyRegistered ? "Registered" : "Available"),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      backgroundColor: isExpired 
+                          ? Colors.grey 
+                          : (isAlreadyRegistered ? Colors.blue : Colors.green),
                     ),
-                    backgroundColor: isAlreadyRegistered ? Colors.blue : Colors.green,
-                  ),
-                  
+
                   const Divider(height: 40),
                   
                   // Info Rows
@@ -143,7 +147,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10)
+                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)
                           ],
                         ),
                         child: QrImageView(
@@ -158,6 +162,25 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     const Center(
                       child: Text("Show this QR at the venue", style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ),
+                    
+                    // --- ADDED LEAVE EVENT BUTTON ---
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isRegistering ? null : _handleUnregister,
+                        icon: const Icon(Icons.logout, color: Colors.red),
+                        label: Text(
+                          _isRegistering ? "Processing..." : "Leave Event",
+                          style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
                   ] else ...[
                     // Register Button only shows if NOT registered
                     SizedBox(
@@ -165,13 +188,16 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       height: 56,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryBlue,
+                          // Change color to grey if expired
+                          backgroundColor: isExpired ? Colors.grey : AppTheme.primaryBlue,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        onPressed: _isRegistering ? null : _handleRegistration,
-                        child: _isRegistering 
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Register Now", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        // Disable button if expired by setting onPressed to null
+                        onPressed: (isExpired || _isRegistering) ? null : _handleRegistration,
+                        child: Text(
+                          isExpired ? "Event Ended" : "Register Now",
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ],
@@ -183,6 +209,53 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleUnregister() async {
+    // 1. Ask for confirmation
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Leave Event?"),
+        content: const Text("Are you sure you want to unregister? You will need to register again if you change your mind."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Leave", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirm) return;
+
+    // 2. Perform the update
+    setState(() => _isRegistering = true);
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.event.id)
+          .update({
+        'participants': FieldValue.arrayRemove([userId]),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You have left the event.")),
+        );
+        // Optional: Navigate back if the user shouldn't be on the detail page anymore
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      debugPrint("Unregister Error: $e");
+    } finally {
+      if (mounted) setState(() => _isRegistering = false);
+    }
   }
 
   Widget _buildInfoRow(IconData icon, String title, String subtitle) {

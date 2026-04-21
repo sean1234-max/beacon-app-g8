@@ -29,45 +29,62 @@ class ClubDetailsScreen extends StatelessWidget {
       return;
     }
 
-    // 2. Fetch user data for the registration record
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    
-    // 3. Create the registration document
-    await FirebaseFirestore.instance.collection('registrations').add({
-      'clubId': club.id,
-      'userId': user.uid,
-      'name': userDoc.data()?['displayName'] ?? "Student",
-      'bio': userDoc.data()?['bio'] ?? "APU Student",
-      'photoUrl': userDoc.data()?['photoUrl'] ?? "",
-      'role': 'member',
-      'joinedAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      // 2. Fetch user data for personalized updates
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final String userName = userDoc.data()?['displayName'] ?? "Student";
 
-    // --- NEW NOTIFICATION LOGIC START ---
+      // 3. Create the registration document (used for Member List)
+      await FirebaseFirestore.instance.collection('registrations').add({
+        'clubId': club.id,
+        'userId': user.uid,
+        'name': userName,
+        'bio': userDoc.data()?['bio'] ?? "APU Student",
+        'photoUrl': userDoc.data()?['photoUrl'] ?? "",
+        'role': 'member',
+        'joinedAt': FieldValue.serverTimestamp(),
+      });
 
-    // 4. Update the User document with the club ID (for broadcast targeting)
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-      'joinedClubs': FieldValue.arrayUnion([club.id])
-    });
+      // --- NEW: UPDATE CLUB DOCUMENT ARRAY ---
+      // This makes your "Quick Stats" count dynamic and instant
+      await FirebaseFirestore.instance.collection('clubs').doc(club.id).update({
+        'members': FieldValue.arrayUnion([user.uid])
+      });
 
-    // 5. Send the welcome notification
-    await NotificationService.sendNotification(
-      userId: user.uid,
-      title: "Welcome to ${club.name}! 🌟",
-      message: "You've successfully joined the club. Check your notifications for new updates and events!",
-      type: "approval", // Green checkmark icon
-    );
+      // --- NEW: RECENT UPDATES ANNOUNCEMENT ---
+      await FirebaseFirestore.instance
+          .collection('clubs')
+          .doc(club.id)
+          .collection('updates')
+          .add({
+        'content': 'Welcome $userName to the club! 🎊',
+        'authorName': 'System',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-    // --- NEW NOTIFICATION LOGIC END ---
+      // 4. Update the User document with the club ID
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'joinedClubs': FieldValue.arrayUnion([club.id])
+      });
 
-    if (context.mounted) {
-      // Navigator.pop(context); // Optional: keep this if you want to close the details screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Welcome to ${club.name}!"),
-          backgroundColor: Colors.green,
-        ),
+      // 5. Send the welcome notification
+      await NotificationService.sendNotification(
+        userId: user.uid,
+        title: "Welcome to ${club.name}! 🌟",
+        message: "You've successfully joined the club. Check your notifications for new updates!",
+        type: "approval",
       );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Welcome to ${club.name}!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error joining club: $e");
     }
   }
 
