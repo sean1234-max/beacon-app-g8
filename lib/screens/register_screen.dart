@@ -4,11 +4,12 @@ import 'package:assignment/theme/app_theme.dart';
 import 'package:assignment/screens/login_screen.dart';
 import 'package:assignment/screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:assignment/services/auth_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Ensure your web config is set up as discussed
+  await Firebase
+      .initializeApp(); // Ensure your web config is set up as discussed
   runApp(const APUConnectApp());
 }
 
@@ -92,16 +93,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(assignedRole == 'club_leader' 
-            ? "Club Leader account created!" 
-            : "Student account created!"),
+          content: Text(assignedRole == 'club_leader'
+              ? "Club Leader account created!"
+              : "Student account created!"),
           backgroundColor: AppTheme.primaryBlue,
         ),
       );
     } else {
       // Handle potential errors (e.g. weak password or email already in use)
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registration failed. Please check your details.")),
+        const SnackBar(
+            content: Text("Registration failed. Please check your details.")),
       );
     }
   }
@@ -120,39 +122,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           children: [
             TextField(
-              controller: _nameController, 
-              decoration: const InputDecoration(labelText: "Full Name")
-            ),
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: "Full Name")),
             const SizedBox(height: 15),
             TextField(
-              controller: _emailController, 
-              decoration: const InputDecoration(
-                labelText: "Email",
-                hintText: "Use @mail.apu.edu.my for Leader role", // Hint for testing
-                hintStyle: TextStyle(fontSize: 12)
-              )
-            ),
+                controller: _emailController,
+                decoration: const InputDecoration(
+                    labelText: "Email",
+                    hintText:
+                        "Use @mail.apu.edu.my for Leader role", // Hint for testing
+                    hintStyle: TextStyle(fontSize: 12))),
             const SizedBox(height: 15),
             TextField(
-              controller: _passwordController, 
-              decoration: const InputDecoration(labelText: "Password"), 
-              obscureText: true
-            ),
+                controller: _passwordController,
+                decoration: const InputDecoration(labelText: "Password"),
+                obscureText: true),
             const SizedBox(height: 30),
-            _isLoading 
-              ? const CircularProgressIndicator()
-              : SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _register, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+            _isLoading
+                ? const CircularProgressIndicator()
+                : SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _register,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                      child: const Text("Register"),
                     ),
-                    child: const Text("Register"),
                   ),
-                ),
           ],
         ),
       ),

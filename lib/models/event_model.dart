@@ -7,8 +7,17 @@ class Event {
   final String description;
   final String location;
   final DateTime dateTime;
+  final DateTime? registrationDeadline;
   final List<String> participants;
   final String creatorId;
+  final String paymentType; // 'free' or 'paid'
+  final double eventFee;
+  final String picName;
+  final String picPhone;
+  final String bankName;
+  final String bankAccountNumber;
+  final String bankReceiverName;
+  final String status;
 
   Event({
     required this.id,
@@ -16,16 +25,24 @@ class Event {
     required this.description,
     required this.location,
     required this.dateTime,
+    this.registrationDeadline,
     required this.participants,
     required this.creatorId,
+    this.paymentType = 'free',
+    this.eventFee = 0,
+    this.picName = '',
+    this.picPhone = '',
+    this.bankName = '',
+    this.bankAccountNumber = '',
+    this.bankReceiverName = '',
+    this.status = 'pending',
   });
 
-  // This helper makes the date look nice on the Dashboard (e.g., "12 Apr")
   String get date => DateFormat('dd MMM').format(dateTime);
 
-  // This is the "instruction manual" Firestore was looking for
+  bool get isPaid => paymentType == 'paid';
+
   factory Event.fromFirestore(DocumentSnapshot doc) {
-  // Use a Safe Map cast
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
     return Event(
@@ -33,16 +50,24 @@ class Event {
       title: data['title'] ?? 'No Title',
       description: data['description'] ?? '',
       location: data['location'] ?? 'No Location',
-      // Ensure we handle the Timestamp safely
-      dateTime: data['dateTime'] != null 
-          ? (data['dateTime'] as Timestamp).toDate() 
+      dateTime: data['dateTime'] != null
+          ? (data['dateTime'] as Timestamp).toDate()
           : DateTime.now(),
-      // CRITICAL: This is likely where the error happens. 
-      // We must cast the list properly.
-      participants: data['participants'] != null 
-          ? List<String>.from(data['participants']) 
+      registrationDeadline: data['registrationDeadline'] != null
+          ? (data['registrationDeadline'] as Timestamp).toDate()
+          : null,
+      participants: data['participants'] != null
+          ? List<String>.from(data['participants'])
           : [],
       creatorId: data['creatorId'] ?? '',
+      paymentType: data['paymentType'] ?? 'free',
+      eventFee: (data['eventFee'] as num?)?.toDouble() ?? 0,
+      picName: data['picName'] ?? '',
+      picPhone: data['picPhone'] ?? '',
+      bankName: data['bankName'] ?? '',
+      bankAccountNumber: data['bankAccountNumber'] ?? '',
+      bankReceiverName: data['bankReceiverName'] ?? '',
+      status: data['status'] ?? 'pending',
     );
   }
 }

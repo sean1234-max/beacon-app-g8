@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:assignment/models/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:assignment/theme/app_theme.dart';
@@ -52,7 +54,8 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
         await NotificationService.sendNotification(
           userId: user.uid,
           title: "Password Changed 🔐",
-          message: "Your account password was successfully updated. If you did not perform this action, please contact APU IT support immediately.",
+          message:
+              "Your account password was successfully updated. If you did not perform this action, please contact APU IT support immediately.",
           type: "security",
         );
 
@@ -68,7 +71,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
         }
       }
     } catch (e) {
-      // Note: updatePassword often requires "Recent Login". 
+      // Note: updatePassword often requires "Recent Login".
       // If this fails, the user might need to log out and log back in.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,7 +97,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
           .collection('users')
           .doc(user.uid)
           .get();
-          
+
       if (doc.exists && doc.data() != null) {
         setState(() {
           // Default to false if the field doesn't exist yet
@@ -109,21 +112,26 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         // 1. Delete user data from Firestore first
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
-        
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .delete();
+
         // 2. Delete the Auth account
         await user.delete();
-        
+
         // 3. Navigate back to Login
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error: Please re-login to delete your account.")),
+        const SnackBar(
+            content: Text("Error: Please re-login to delete your account.")),
       );
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -137,8 +145,9 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
         children: [
           const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Text("Privacy Settings", 
-              style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+            child: Text("Privacy Settings",
+                style: TextStyle(
+                    color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
           ),
           SwitchListTile(
             title: const Text("Private Profile"),
@@ -147,7 +156,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
             activeThumbColor: AppTheme.primaryBlue,
             onChanged: (val) async {
               setState(() => _isPrivateAccount = val);
-              
+
               // Save to Firestore
               final user = FirebaseAuth.instance.currentUser;
               if (user != null) {
@@ -161,8 +170,9 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
           const Divider(),
           const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Text("Account Security", 
-              style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+            child: Text("Account Security",
+                style: TextStyle(
+                    color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
           ),
           ListTile(
             leading: const Icon(Icons.password_rounded),
@@ -172,7 +182,8 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
               // Show a dialog when tapped
               showDialog(
                 context: context,
-                builder: (context) => StatefulBuilder( // Necessary to toggle the eye icon inside a dialog
+                builder: (context) => StatefulBuilder(
+                  // Necessary to toggle the eye icon inside a dialog
                   builder: (context, setDialogState) {
                     return AlertDialog(
                       title: const Text("Change Password"),
@@ -183,7 +194,9 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                           labelText: "New Password",
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: AppTheme.primaryBlue,
                             ),
                             onPressed: () {
@@ -202,8 +215,10 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                         ),
                         ElevatedButton(
                           onPressed: _handlePasswordReset,
-                          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
-                          child: const Text("Update", style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue),
+                          child: const Text("Update",
+                              style: TextStyle(color: Colors.white)),
                         ),
                       ],
                     );
@@ -214,13 +229,15 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.delete_forever, color: Colors.red),
-            title: const Text("Delete Account", style: TextStyle(color: Colors.red)),
+            title: const Text("Delete Account",
+                style: TextStyle(color: Colors.red)),
             onTap: () {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text("Delete Account?"),
-                  content: const Text("This action is permanent and will wipe all your data from Beacon."),
+                  content: const Text(
+                      "This action is permanent and will wipe all your data from Beacon."),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
@@ -228,7 +245,8 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                     ),
                     TextButton(
                       onPressed: _handleDeleteAccount,
-                      child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                      child: const Text("Delete",
+                          style: TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),

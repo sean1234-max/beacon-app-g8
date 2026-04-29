@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/event_model.dart'; // Make sure this path is correct
@@ -87,7 +89,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
     if (time == null) return;
 
     setState(() {
-      _selectedDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _selectedDate =
+          DateTime(date.year, date.month, date.day, time.hour, time.minute);
     });
   }
 
@@ -95,52 +98,60 @@ class _EditEventScreenState extends State<EditEventScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Edit Event Details")),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                children: [
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(labelText: "Event Title", border: OutlineInputBorder()),
-                    validator: (val) => val!.isEmpty ? "Title cannot be empty" : null,
-                  ),
-                  const SizedBox(height: 15),
-                  TextFormField(
-                    controller: _descController,
-                    decoration: const InputDecoration(labelText: "Description", border: OutlineInputBorder()),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 15),
-                  TextFormField(
-                    controller: _locController,
-                    decoration: const InputDecoration(labelText: "Location", border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 15),
-                  ListTile(
-                    title: Text("Date: ${DateFormat('dd MMM yyyy, hh:mm a').format(_selectedDate)}"),
-                    trailing: const Icon(Icons.calendar_month),
-                    onTap: _pickDateTime,
-                    tileColor: Colors.blue.withValues(alpha: 0.1),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: _updateEvent,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF003366),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  children: [
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                          labelText: "Event Title",
+                          border: OutlineInputBorder()),
+                      validator: (val) =>
+                          val!.isEmpty ? "Title cannot be empty" : null,
                     ),
-                    child: const Text("Save Changes"),
-                  ),
-                ],
+                    const SizedBox(height: 15),
+                    TextFormField(
+                      controller: _descController,
+                      decoration: const InputDecoration(
+                          labelText: "Description",
+                          border: OutlineInputBorder()),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 15),
+                    TextFormField(
+                      controller: _locController,
+                      decoration: const InputDecoration(
+                          labelText: "Location", border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 15),
+                    ListTile(
+                      title: Text(
+                          "Date: ${DateFormat('dd MMM yyyy, hh:mm a').format(_selectedDate)}"),
+                      trailing: const Icon(Icons.calendar_month),
+                      onTap: _pickDateTime,
+                      tileColor: Colors.blue.withValues(alpha: 0.1),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      onPressed: _updateEvent,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF003366),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                      child: const Text("Save Changes"),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
     );
   }
 }

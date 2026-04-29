@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api, no_leading_underscores_for_local_identifiers
+
 import 'package:assignment/screens/edit_event_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -70,60 +72,63 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-    Future<void> checkAndNotifyExpiredEvents() async {
-      final now = DateTime.now();
-      
-      try {
-        // Simplified Query: Just get events that have passed
-        final expiredQuery = await FirebaseFirestore.instance
-            .collection('events')
-            .where('dateTime', isLessThan: now) 
-            .get();
+  Future<void> checkAndNotifyExpiredEvents() async {
+    final now = DateTime.now();
 
-        for (var doc in expiredQuery.docs) {
-          final data = doc.data();
-          
-          // Safety Check: If we already notified for this event, skip it
-          // This works even if the field is missing (null != true)
-          if (data['isExpiredNotified'] == true) continue;
+    try {
+      // Simplified Query: Just get events that have passed
+      final expiredQuery = await FirebaseFirestore.instance
+          .collection('events')
+          .where('dateTime', isLessThan: now)
+          .get();
 
-          final String eventId = doc.id;
-          final String eventTitle = data['title'] ?? "Untitled Event";
-          final String creatorId = data['creatorId'] ?? "";
-          final List<dynamic> participants = data['participants'] ?? [];
+      for (var doc in expiredQuery.docs) {
+        final data = doc.data();
 
-          // Notify Creator
-          if (creatorId.isNotEmpty) {
-            await _sendNotification(
-              userId: creatorId,
-              title: "Event Completed",
-              body: "Your event '$eventTitle' has ended. Thank you for hosting!",
-            );
-          }
+        // Safety Check: If we already notified for this event, skip it
+        // This works even if the field is missing (null != true)
+        if (data['isExpiredNotified'] == true) continue;
 
-          // Notify Participants
-          for (String uid in participants) {
-            await _sendNotification(
-              userId: uid,
-              title: "Event Ended",
-              body: "We hope you enjoyed '$eventTitle'!",
-            );
-          }
+        final String eventId = doc.id;
+        final String eventTitle = data['title'] ?? "Untitled Event";
+        final String creatorId = data['creatorId'] ?? "";
+        final List<dynamic> participants = data['participants'] ?? [];
 
-          // Mark as notified in the database
-          await FirebaseFirestore.instance.collection('events').doc(eventId).update({
-            'isExpiredNotified': true,
-          });
+        // Notify Creator
+        if (creatorId.isNotEmpty) {
+          await _sendNotification(
+            userId: creatorId,
+            title: "Event Completed",
+            body: "Your event '$eventTitle' has ended. Thank you for hosting!",
+          );
         }
-      } catch (e) {
-        debugPrint("Notification Error: $e");
-        // This catch prevents the "Yellow Highlight" crash in VS Code
+
+        // Notify Participants
+        for (String uid in participants) {
+          await _sendNotification(
+            userId: uid,
+            title: "Event Ended",
+            body: "We hope you enjoyed '$eventTitle'!",
+          );
+        }
+
+        // Mark as notified in the database
+        await FirebaseFirestore.instance
+            .collection('events')
+            .doc(eventId)
+            .update({
+          'isExpiredNotified': true,
+        });
       }
+    } catch (e) {
+      debugPrint("Notification Error: $e");
+      // This catch prevents the "Yellow Highlight" crash in VS Code
     }
+  }
 
   Future<void> _sendNotification({
-    required String userId, 
-    required String title, 
+    required String userId,
+    required String title,
     required String body,
     String type = 'info', // Added a default type
   }) async {
@@ -152,117 +157,124 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-  final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  // Screens list
-  final List<Widget> _screens = [
-    EventListView(searchQuery: _searchQuery, userRole: _userRole),
-    const ClubsScreen(),
-    const ProfileScreen(),
-    const NotificationsScreen(),
-  ];
+    // Screens list
+    final List<Widget> _screens = [
+      EventListView(searchQuery: _searchQuery, userRole: _userRole),
+      const ClubsScreen(),
+      const ProfileScreen(),
+      const NotificationsScreen(),
+    ];
 
-  // A reusable StreamBuilder for the notification count
-  Widget _buildNotificationBadge(Widget child) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserId)
-          .collection('notifications')
-          .where('isRead', isEqualTo: false)
-          .snapshots(),
-      builder: (context, snapshot) {
-        int unreadCount = snapshot.data?.docs.length ?? 0;
-        return Badge(
-          isLabelVisible: unreadCount > 0,
-          label: Text('$unreadCount'),
-          child: child,
-        );
-      },
-    );
-  }
+    // A reusable StreamBuilder for the notification count
+    Widget _buildNotificationBadge(Widget child) {
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .collection('notifications')
+            .where('isRead', isEqualTo: false)
+            .snapshots(),
+        builder: (context, snapshot) {
+          int unreadCount = snapshot.data?.docs.length ?? 0;
+          return Badge(
+            isLabelVisible: unreadCount > 0,
+            label: Text('$unreadCount'),
+            child: child,
+          );
+        },
+      );
+    }
 
-  return Scaffold(
-    drawer: Drawer(
-      child: Column(
-        children: [
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: AppTheme.primaryBlue),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 40, color: AppTheme.primaryBlue),
+    return Scaffold(
+      drawer: Drawer(
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              decoration: const BoxDecoration(color: AppTheme.primaryBlue),
+              currentAccountPicture: const CircleAvatar(
+                backgroundColor: Colors.white,
+                child:
+                    Icon(Icons.person, size: 40, color: AppTheme.primaryBlue),
+              ),
+              accountName: Text(
+                "${FirebaseAuth.instance.currentUser?.displayName ?? "Student"} (${_userRole.toUpperCase()})",
+              ),
+              accountEmail:
+                  Text(FirebaseAuth.instance.currentUser?.email ?? ""),
             ),
-            accountName: Text(
-              "${FirebaseAuth.instance.currentUser?.displayName ?? "Student"} (${_userRole.toUpperCase()})",
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text("Home"),
+              onTap: () => setState(() => _selectedIndex = 0),
             ),
-            accountEmail: Text(FirebaseAuth.instance.currentUser?.email ?? ""),
-          ),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text("Home"),
-            onTap: () => setState(() => _selectedIndex = 0),
-          ),
-          const Spacer(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text("Logout"),
-            onTap: () => AuthService().signOut(),
+            const Spacer(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text("Logout"),
+              onTap: () => AuthService().signOut(),
+            ),
+          ],
+        ),
+      ),
+      appBar: AppBar(
+        backgroundColor: AppTheme.primaryBlue,
+        elevation: 4,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: _buildSearchField(),
+        actions: [
+          IconButton(
+            // --- Dynamic Badge in AppBar ---
+            icon: _buildNotificationBadge(
+                const Icon(Icons.notifications, color: Colors.white)),
+            onPressed: () => setState(() => _selectedIndex = 3),
           ),
         ],
       ),
-    ),
-    appBar: AppBar(
-      backgroundColor: AppTheme.primaryBlue,
-      elevation: 4,
-      iconTheme: const IconThemeData(color: Colors.white),
-      title: _buildSearchField(),
-      actions: [
-        IconButton(
-          // --- Dynamic Badge in AppBar ---
-          icon: _buildNotificationBadge(const Icon(Icons.notifications, color: Colors.white)),
-          onPressed: () => setState(() => _selectedIndex = 3),
-        ),
-      ],
-    ),
-    body: _screens[_selectedIndex],
-    floatingActionButton: _shouldShowFab()
-        ? FloatingActionButton.extended(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AddEventScreen()),
-              );
-            },
-            backgroundColor: AppTheme.primaryBlue,
-            foregroundColor: Colors.white,
-            label: const Text("Create Event"),
-            icon: const Icon(Icons.add),
-          )
-        : null,
-    bottomNavigationBar: BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: (index) {
-        setState(() {
-          _selectedIndex = index;
-          if (index != 0) _searchQuery = "";
-        });
-      },
-      selectedItemColor: AppTheme.primaryBlue,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed, // Better for 4+ items
-      items: [
-        const BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
-        const BottomNavigationBarItem(icon: Icon(Icons.groups), label: "Clubs"),
-        const BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        BottomNavigationBarItem(
-          // --- Dynamic Badge in Bottom Nav ---
-          icon: _buildNotificationBadge(const Icon(Icons.notifications)), 
-          label: "Alerts",
-        ),
-      ],
-    ),
-  );
-}
+      body: _screens[_selectedIndex],
+      floatingActionButton: _shouldShowFab()
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const AddEventScreen()),
+                );
+              },
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              label: const Text("Create Event"),
+              icon: const Icon(Icons.add),
+            )
+          : null,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+            if (index != 0) _searchQuery = "";
+          });
+        },
+        selectedItemColor: AppTheme.primaryBlue,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed, // Better for 4+ items
+        items: [
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.event), label: "Events"),
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.groups), label: "Clubs"),
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.person), label: "Profile"),
+          BottomNavigationBarItem(
+            // --- Dynamic Badge in Bottom Nav ---
+            icon: _buildNotificationBadge(const Icon(Icons.notifications)),
+            label: "Alerts",
+          ),
+        ],
+      ),
+    );
+  }
 
   // Helper function to keep the build method clean
   bool _shouldShowFab() {

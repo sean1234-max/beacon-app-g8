@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,7 +15,7 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final user = FirebaseAuth.instance.currentUser;
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers to handle text input
   late TextEditingController _nameController;
   late TextEditingController _bioController;
@@ -32,7 +34,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // Fetch extra data (Bio/Student ID) from Firestore
   Future<void> _loadUserData() async {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .get();
     if (doc.exists) {
       setState(() {
         _bioController.text = doc.data()?['bio'] ?? "";
@@ -43,12 +48,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _updateProfile() async {
     await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
-      'name': _nameController.text, // Changed from displayName to name for consistency
+      'name': _nameController
+          .text, // Changed from displayName to name for consistency
       'bio': _bioController.text,
-      'studentId': _studentIdController.text.toUpperCase(), // Normalize to uppercase
+      'studentId':
+          _studentIdController.text.toUpperCase(), // Normalize to uppercase
       'lastUpdated': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-    
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -88,82 +95,87 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  const Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.grey,
-                        child: Icon(Icons.person, size: 50, color: Colors.white),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    const Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey,
+                          child:
+                              Icon(Icons.person, size: 50, color: Colors.white),
+                        ),
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppTheme.primaryBlue,
+                          child: Icon(Icons.camera_alt,
+                              size: 18, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: "Full Name",
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person),
                       ),
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppTheme.primaryBlue,
-                        child: Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                      validator: (val) =>
+                          val!.isEmpty ? "Enter your name" : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _studentIdController,
+                      decoration: const InputDecoration(
+                        labelText: "Student ID (e.g., TP012345)",
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.badge),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: "Full Name",
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
+                      validator: (val) {
+                        if (val == null || val.isEmpty) {
+                          return "Student ID is required";
+                        }
+                        if (!RegExp(r'^[Tt][Pp]\d{6}$').hasMatch(val)) {
+                          return "Enter a valid ID (e.g., TP012345)";
+                        }
+                        return null;
+                      },
                     ),
-                    validator: (val) => val!.isEmpty ? "Enter your name" : null,
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _studentIdController,
-                    decoration: const InputDecoration(
-                      labelText: "Student ID (e.g., TP012345)",
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.badge),
-                    ),
-                    validator: (val) {
-                      if (val == null || val.isEmpty) return "Student ID is required";
-                      if (!RegExp(r'^[Tt][Pp]\d{6}$').hasMatch(val)) {
-                        return "Enter a valid ID (e.g., TP012345)";
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _bioController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: "Bio",
-                      border: OutlineInputBorder(),
-                      hintText: "Tell us about yourself...",
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _updateProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _bioController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: "Bio",
+                        border: OutlineInputBorder(),
+                        hintText: "Tell us about yourself...",
                       ),
-                      child: const Text("Save Changes"),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _updateProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text("Save Changes"),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
     );
   }
 }
