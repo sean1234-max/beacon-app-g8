@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'add_event_screen.dart';
 import 'my_tickets_screen.dart';
 import 'scan_qr_screen.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -457,8 +458,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {
-                // show confirmation dialog here
+              onPressed: () async {
+                try {
+                  // 1. Sign out from Firebase Auth
+                  await FirebaseAuth.instance.signOut();
+                  
+                  // 2. Clear the screen stack and instantly jump to Login Screen
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false, 
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error logging out: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
               icon: const Icon(Icons.logout_rounded, color: Colors.red),
               label: const Text('Log Out',

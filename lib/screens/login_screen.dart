@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'package:assignment/screens/register_screen.dart';
+import 'profile_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,20 +16,29 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  void _submit(bool isLogin) async {
-    setState(() => _isLoading = true);
-    var user = isLogin 
-      ? await _authService.signIn(_emailController.text, _passwordController.text)
-      : await _authService.register(_emailController.text, _passwordController.text);
-    
-    setState(() => _isLoading = false);
+void _submit(bool isLogin) async {
+  setState(() => _isLoading = true);
+  var user = isLogin 
+    ? await _authService.signIn(_emailController.text, _passwordController.text)
+    : await _authService.register(_emailController.text, _passwordController.text);
+  
+  setState(() => _isLoading = false);
 
-    if (user == null && mounted) {
+  if (user == null) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Authentication Failed. Please try again.")),
       );
     }
+  } else {
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+        (route) => false, 
+      );
+    }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+    // ignore: unused_element
     void _handleLogin() async {
     // 1. Basic local check
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
