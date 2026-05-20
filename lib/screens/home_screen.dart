@@ -15,6 +15,7 @@ import 'package:assignment/theme/app_theme.dart';
 import 'package:assignment/screens/profile_screen.dart';
 import 'package:assignment/screens/notifications_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:assignment/screens/login_screen.dart';
 // lib/screens/home_screen.dart
 
 class MainNavigationScreen extends StatefulWidget {
@@ -213,7 +214,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text("Logout"),
-              onTap: () => AuthService().signOut(),
+              onTap: () async {
+                await AuthService().signOut();
+
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil (
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              }
             ),
           ],
         ),

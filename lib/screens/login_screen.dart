@@ -40,22 +40,26 @@ void _submit(bool isLogin) async {
   }
 }
 
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                "APU Connect",
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 60), // Spacing from top safe area
+                Image.asset(
+                  'assets/Beacon Logo.png',
+                  height: 250,
+                  width: 250,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 30),
+                
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Student Email'),
@@ -93,8 +97,9 @@ void _submit(bool isLogin) async {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
     // ignore: unused_element
     void _handleLogin() async {
