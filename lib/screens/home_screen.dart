@@ -550,6 +550,8 @@ class EventListView extends StatelessWidget {
                 stream: DatabaseService().getEvents(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
+                    print("DEBUG EVENT ERROR: ${snapshot.error}"); 
+                    
                     return const Center(child: Text("Error loading events"));
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {

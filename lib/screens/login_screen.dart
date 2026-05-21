@@ -16,31 +16,53 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
-void _submit(bool isLogin) async {
-  setState(() => _isLoading = true);
-  var user = isLogin 
-    ? await _authService.signIn(_emailController.text, _passwordController.text)
-    : await _authService.register(_emailController.text, _passwordController.text);
-  
-  setState(() => _isLoading = false);
+  void _submit(bool isLogin) async {
+    setState(() => _isLoading = true);
+    var user = isLogin 
+      ? await _authService.signIn(_emailController.text, _passwordController.text)
+      : await _authService.register(_emailController.text, _passwordController.text);
+    
+    setState(() => _isLoading = false);
 
-  if (user == null) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Authentication Failed. Please try again.")),
-      );
-    }
-  } else {
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => MainNavigationScreen ()),
-        (route) => false, 
-      );
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Authentication Failed. Please try again.")),
+        );
+      }
+    } else {
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => MainNavigationScreen()),
+          (route) => false, 
+        );
+      }
     }
   }
-}
 
-@override
+  // 🟢 NEW: Google Sign-In Method Handler
+  void _submitGoogle() async {
+    setState(() => _isLoading = true);
+    var user = await _authService.signInWithGoogle();
+    setState(() => _isLoading = false);
+
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Google Sign-In Canceled or Failed.")),
+        );
+      }
+    } else {
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => MainNavigationScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
@@ -60,50 +82,82 @@ void _submit(bool isLogin) async {
                 ),
                 const SizedBox(height: 30),
                 
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Student Email'),
-                validator: (value) {
-                  if (value == null || !value.contains('@')) {
-                    return 'Please enter a valid student email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-              ),
-              const SizedBox(height: 24),
-              _isLoading 
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: () => _submit(true),
-                    child: const Text('Login'),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Student Email'),
+                  validator: (value) {
+                    if (value == null || !value.contains('@')) {
+                      return 'Please enter a valid student email';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 24),
+                _isLoading 
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: () => _submit(true),
+                      child: const Text('Login'),
+                    ),
+                
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                    );
+                  },
+                  child: const Text("Don't have an account? Register here"),
+                ),
+
+                // 🟢 NEW: Clean UI Visual Divider
+                const Row(
+                  children: [
+                    Expanded(child: Divider(thickness: 1, endIndent: 10)),
+                    Text("OR", style: TextStyle(color: Colors.grey)),
+                    Expanded(child: Divider(thickness: 1, indent: 10)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // 🟢 NEW: Material Styled Google Button
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-              // Look for your "Don't have an account?" text or button
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                  );
-                },
-                child: const Text("Don't have an account? Register here"),
-              )
-            ],
+                  // 🟢 UPDATED: This handles the 900x715 proportions automatically
+                  icon: Image.asset(
+                    'assets/googleLogo.png', // Make sure this matches your filename exactly
+                    height: 20,
+                    width: 20,                 // Forces it into a 1:1 box aspect ratio
+                    fit: BoxFit.contain,       // Scales it down safely without distortion
+                  ),
+                  label: const Text(
+                    "Continue with Google",
+                    style: TextStyle(color: Colors.black87, fontSize: 16),
+                  ),
+                  onPressed: _isLoading ? null : _submitGoogle,
+                )
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-    // ignore: unused_element
-    void _handleLogin() async {
-    // 1. Basic local check
+  // ignore: unused_element
+  void _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
@@ -115,7 +169,7 @@ void _submit(bool isLogin) async {
 
     try {
       var user = await _authService.signIn(
-        _emailController.text.trim(), // trim() removes accidental spaces
+        _emailController.text.trim(),
         _passwordController.text,
       );
 

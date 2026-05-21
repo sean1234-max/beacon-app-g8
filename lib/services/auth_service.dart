@@ -1,12 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/cupertino.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Sign In
+  // 🟢 Guard flag to prevent the "init() has already been called" error loop
+  bool _isGoogleInitialized = false;
+
+  // Sign In with Email and Password
   Future<User?> signIn(String email, String password) async {
     try {
       UserCredential result = await _auth.signInWithEmailAndPassword(
@@ -20,28 +24,23 @@ class AuthService {
     }
   }
 
-  // Register with Role
-  // Default role is 'student', can be passed as 'club_leader' or 'admin'
-  Future<User?> register(String email, String password,
-      {String role = 'student'}) async {
+  // Register with Email, Password, and Role
+  Future<User?> register(String email, String password, {String role = 'student'}) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // --- CREATE FIRESTORE DOCUMENT ---
       if (result.user != null) {
         await _db.collection('users').doc(result.user!.uid).set({
           'email': email,
-          'role': role, // Saves 'student', 'club_leader', or 'admin'
-          'displayName':
-              email.split('@')[0], // Uses email prefix as default name
+          'role': role,
+          'displayName': email.split('@')[0],
           'studentId': 'TPXXXXXX',
           'isPrivate': false,
           'bio': 'New APU Student',
-          'createdAt':
-              FieldValue.serverTimestamp(), // Good for tracking new users
+          'createdAt': FieldValue.serverTimestamp(),
         });
       }
 
@@ -52,8 +51,73 @@ class AuthService {
     }
   }
 
-  // Sign Out
+  // 🟢 FULLY INTEGRATED: Google Sign-In with your JSON Client ID
+  Future<User?> signInWithGoogle() async {
+    try {
+      // 1. Only initialize if it hasn't been called yet during this app session
+      if (!_isGoogleInitialized) {
+        await GoogleSignIn.instance.initialize(
+          // 🟢 Injected Client Type 3 ID from your google-services.json
+          clientId: '851476540070-c4a8bao7qspb2lmrjcl1a98ltvaq850d.apps.googleusercontent.com',
+        );
+        _isGoogleInitialized = true;
+      }
+
+      // 2. Check if the active platform natively supports the overlay workflow
+      if (!GoogleSignIn.instance.supportsAuthenticate()) {
+        debugPrint("Platform doesn't support immediate direct authentication workflows.");
+        return null;
+      }
+
+      // 3. STEP 1: Authentication (Identity Verification)
+      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
+
+      if (googleUser == null) {
+        return null; // User backed out of the account selection panel
+      }
+
+      // 4. STEP 2: Authorization (Explicitly requesting scopes for the Access Token)
+      final List<String> scopes = ['email'];
+      final GoogleSignInClientAuthorization authorizedUser = 
+          await googleUser.authorizationClient.authorizeScopes(scopes);
+
+      // 5. Construct structural credentials for the Firebase handshake
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: authorizedUser.accessToken,         // Obtained securely from Authorization
+        idToken: googleUser.authentication.idToken,      // Obtained securely from Identity
+      );
+
+      // 6. Complete authentication inside Firebase Auth
+      UserCredential result = await _auth.signInWithCredential(credential);
+      User? user = result.user;
+
+      // 7. Sync payload attributes smoothly over to Firestore document records
+      if (user != null) {
+        await _db.collection('users').doc(user.uid).set({
+          'email': user.email,
+          'displayName': user.displayName ?? user.email?.split('@')[0] ?? 'APU Student',
+          'profilePic': user.photoURL ?? '',
+          'lastLogin': FieldValue.serverTimestamp(),
+          'studentId': 'TPXXXXXX',
+          'isPrivate': false,
+          'bio': 'New APU Student',
+        }, SetOptions(merge: true));
+      }
+
+      return user;
+    } catch (e) {
+      debugPrint("Google Sign-In error: ${e.toString()}");
+      return null;
+    }
+  }
+
+  // Sign Out for v7.x Singleton
   Future<void> signOut() async {
-    await _auth.signOut();
+    try {
+      await GoogleSignIn.instance.signOut();
+      await _auth.signOut();
+    } catch (e) {
+      debugPrint("Sign out error: ${e.toString()}");
+    }
   }
 }
