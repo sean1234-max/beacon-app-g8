@@ -226,7 +226,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Event submitted for approval!'),
+            content: Text('Event successfully created!'),
             backgroundColor: Colors.green,
           ),
         );
