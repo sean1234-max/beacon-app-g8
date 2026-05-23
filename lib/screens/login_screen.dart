@@ -1,3 +1,5 @@
+import 'package:assignment/screens/admin_dashboard_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'package:assignment/screens/register_screen.dart';
@@ -32,9 +34,44 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => MainNavigationScreen()),
-          (route) => false, 
+        await _handleRoleBasedNavigation(user.uid);
+      }
+    }
+  }
+
+  Future<void> _handleRoleBasedNavigation(String uid) async {
+    try {
+      // Fetch user data from your Firestore users collection
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (!mounted) return;
+
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        String role = data['role'] ?? 'student'; 
+
+        if (role == 'admin') {
+          // Redirect to your Admin Dashboard
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const AdminDashboardScreen()), 
+            (route) => false,
+          );
+          return;
+        }
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => MainNavigationScreen()),
+        (route) => false,
+      );
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error fetching user profile: $e")),
         );
       }
     }
@@ -116,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text("Don't have an account? Register here"),
                 ),
 
-                // 🟢 NEW: Clean UI Visual Divider
+              
                 const Row(
                   children: [
                     Expanded(child: Divider(thickness: 1, endIndent: 10)),
@@ -126,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // 🟢 NEW: Material Styled Google Button
+              
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -135,12 +172,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  // 🟢 UPDATED: This handles the 900x715 proportions automatically
                   icon: Image.asset(
-                    'assets/googleLogo.png', // Make sure this matches your filename exactly
+                    'assets/googleLogo.png', 
                     height: 20,
-                    width: 20,                 // Forces it into a 1:1 box aspect ratio
-                    fit: BoxFit.contain,       // Scales it down safely without distortion
+                    width: 20,                 
+                    fit: BoxFit.contain,       
                   ),
                   label: const Text(
                     "Continue with Google",
