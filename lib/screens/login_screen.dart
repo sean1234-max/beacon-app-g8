@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🟢 NEW: Google Sign-In Method Handler
+  // 🟢 Google Sign-In Method Handler
   void _submitGoogle() async {
     setState(() => _isLoading = true);
     var user = await _authService.signInWithGoogle();
@@ -102,26 +102,63 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white, // Clean white background
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        child: Center(
           child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 60), // Spacing from top safe area
-                Image.asset(
-                  'assets/Beacon Logo.png',
-                  height: 250,
-                  width: 250,
-                  fit: BoxFit.contain,
+                // Logo Section
+                Hero(
+                  tag: 'app_logo',
+                  child: Image.asset(
+                    'assets/Beacon Logo.png',
+                    height: 140, // Slightly smaller for better proportions
+                    width: 140,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 24),
                 
+                // Welcome Text
+                Text(
+                  "Welcome Back",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Sign in to continue to your account",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                
+                // Email Field
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Student Email'),
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Student Email',
+                    hintText: 'e.g. TP123456@mail.apu.edu.my',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
                   validator: (value) {
                     if (value == null || !value.contains('@')) {
                       return 'Please enter a valid student email';
@@ -130,60 +167,116 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                
+                // Password Field
                 TextField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
-                ),
-                const SizedBox(height: 24),
-                _isLoading 
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: () => _submit(true),
-                      child: const Text('Login'),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(true), // Allow pressing enter to submit
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                    );
-                  },
-                  child: const Text("Don't have an account? Register here"),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
                 ),
-
-              
-                const Row(
-                  children: [
-                    Expanded(child: Divider(thickness: 1, endIndent: 10)),
-                    Text("OR", style: TextStyle(color: Colors.grey)),
-                    Expanded(child: Divider(thickness: 1, indent: 10)),
-                  ],
+                const SizedBox(height: 32),
+                
+                // Login Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : () => _submit(true),
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    backgroundColor: Theme.of(context).primaryColor, // Uses your app's primary color
+                    foregroundColor: Colors.white,
+                  ),
+                  child: _isLoading 
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Login',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
                 ),
                 const SizedBox(height: 16),
-
+                
+                // Register Prompt
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account?",
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    TextButton(
+                      onPressed: _isLoading 
+                        ? null 
+                        : () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                            );
+                          },
+                      child: const Text(
+                        "Register here",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
               
+                // Divider
+                Row(
+                  children: [
+                    Expanded(child: Divider(thickness: 1, endIndent: 16, color: Colors.grey.shade300)),
+                    Text(
+                      "OR", 
+                      style: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+                    ),
+                    Expanded(child: Divider(thickness: 1, indent: 16, color: Colors.grey.shade300)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Google Button
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: Colors.grey),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: BorderSide(color: Colors.grey.shade300),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    backgroundColor: Colors.white, // In case of background tint
                   ),
                   icon: Image.asset(
                     'assets/googleLogo.png', 
-                    height: 20,
-                    width: 20,                 
+                    height: 24,
+                    width: 24,                
                     fit: BoxFit.contain,       
                   ),
                   label: const Text(
                     "Continue with Google",
-                    style: TextStyle(color: Colors.black87, fontSize: 16),
+                    style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   onPressed: _isLoading ? null : _submitGoogle,
-                )
+                ),
               ],
             ),
           ),
