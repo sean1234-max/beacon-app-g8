@@ -18,7 +18,7 @@ class APUConnectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'APU Connect',
+      title: 'Beacon',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme, // Using the theme from Step 1
       home: const AuthWrapper(),
@@ -74,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // --- 2. Domain-Based Role Logic ---
     String assignedRole = 'student'; // Default role
     if (email.endsWith('@mail.apu.edu.my')) {
-      assignedRole = 'club_leader';
+      assignedRole = 'student';
     }
 
     // --- 3. Call AuthService with the role ---
