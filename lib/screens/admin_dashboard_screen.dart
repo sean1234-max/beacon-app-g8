@@ -350,7 +350,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1),
                   ),
                   Text(
-                    "Monitor APU Connect performance and user activity",
+                    "Monitor Beacon performance and user activity",
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
                   ),
                 ],

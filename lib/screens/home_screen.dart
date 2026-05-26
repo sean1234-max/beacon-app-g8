@@ -346,14 +346,7 @@ class EventListView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // --- SECTION: STUDENT DASHBOARD (Upcoming Schedule) ---
-              const Text(
-                "Your Upcoming Schedule",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-
-              // We put the StreamBuilder here so the Calendar and the Tickets
-              // both update at the same time using the same data!
+              // StreamBuilder wraps everything now so we can completely hide the schedule section if empty
               StreamBuilder<List<Event>>(
                 stream: DatabaseService().getUserRegisteredEvents(userId),
                 builder: (context, snapshot) {
@@ -363,8 +356,21 @@ class EventListView extends StatelessWidget {
 
                   final registeredEvents = snapshot.data ?? [];
 
+                  // If there are no joined events, completely remove this UI section
+                  if (registeredEvents.isEmpty) {
+                    return const SizedBox.shrink(); 
+                  }
+
+                  // If there are events, render the schedule layout normally
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const Text(
+                        "Your Upcoming Schedule",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      
                       // --- THE SINGLE CORRECT CALENDAR ---
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -397,15 +403,13 @@ class EventListView extends StatelessWidget {
                                   margin: const EdgeInsets.all(6.0),
                                   alignment: Alignment.center,
                                   decoration: const BoxDecoration(
-                                    color: AppTheme
-                                        .primaryBlue, // Solid background
+                                    color: AppTheme.primaryBlue,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Text(
                                     '${day.day}',
                                     style: const TextStyle(
-                                      color: Colors
-                                          .white, // White text so it's readable
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -416,13 +420,9 @@ class EventListView extends StatelessWidget {
                             },
                           ),
                           calendarStyle: CalendarStyle(
-                            // CHANGED THIS LINE:
-                            // Setting max count to 0 hides the default dots
                             markersMaxCount: 0,
-
                             todayDecoration: BoxDecoration(
-                              color:
-                                  AppTheme.primaryBlue.withValues(alpha: 0.15),
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
                             todayTextStyle: const TextStyle(
@@ -436,9 +436,10 @@ class EventListView extends StatelessWidget {
                             formatButtonVisible: false,
                             titleCentered: true,
                             titleTextStyle: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: AppTheme.primaryBlue),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppTheme.primaryBlue,
+                            ),
                           ),
                         ),
                       ),
@@ -446,98 +447,77 @@ class EventListView extends StatelessWidget {
                       // --- 2. THE HORIZONTAL TICKETS ---
                       SizedBox(
                         height: 130,
-                        child: registeredEvents.isEmpty
-                            ? Container(
-                                width: double.infinity,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: registeredEvents.length,
+                          itemBuilder: (context, index) {
+                            final event = registeredEvents[index];
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EventDetailsScreen(event: event),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 220,
+                                margin: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppTheme.primaryBlue,
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ],
                                 ),
-                                child: const Center(
-                                    child: Text("No events joined yet")),
-                              )
-                            : ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: registeredEvents.length,
-                                itemBuilder: (context, index) {
-                                  final event = registeredEvents[index];
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              EventDetailsScreen(event: event),
-                                        ),
-                                      );
-                                    },
-                                    child: Container(
-                                      width: 220,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryBlue,
-                                        borderRadius: BorderRadius.circular(15),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black
-                                                .withValues(alpha: 0.1),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          )
-                                        ],
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      event.title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            event.title,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const Spacer(),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              const Icon(Icons.qr_code_2,
-                                                  color: Colors.white70,
-                                                  size: 32),
-                                              Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.end,
-                                                children: [
-                                                  const Text("Entry Pass",
-                                                      style: TextStyle(
-                                                          color: Colors.white70,
-                                                          fontSize: 10)),
-                                                  Text(event.date,
-                                                      style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 12)),
-                                                ],
-                                              )
-                                            ],
-                                          ),
-                                        ],
-                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  );
-                                }, // End of itemBuilder
-                              ), // End of ListView.builder
-                      ), // End of SizedBox
-                    ], // End of Column (that holds Calendar + Tickets)
-                  ); // End of StreamBuilder return
-                }, // End of StreamBuilder builder
-              ), // End of StreamBuilder
+                                    const Spacer(),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Icon(Icons.qr_code_2, color: Colors.white70, size: 32),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            const Text("Entry Pass", style: TextStyle(color: Colors.white70, fontSize: 10)),
+                                            Text(event.date, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                          ],
+                                        )
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24), // Extra spacer before the "Discover Events" section begins
+                    ],
+                  );
+                },
+              ),
 
-              const SizedBox(height: 24),
+              // --- SECTION: DISCOVER EVENTS ---
+              // Your existing Discover Events UI implementation continues down here...
 
               // --- SECTION: DISCOVER EVENTS ---
               const Text(

@@ -141,20 +141,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         icon = Icons.notifications; color = Colors.grey;
     }
 
-    return Container(
-      color: isRead ? Colors.transparent : AppTheme.primaryBlue.withValues(alpha: 0.05),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.1),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          data['title'] ?? 'Notification',
-          style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.bold),
-        ),
-        subtitle: Text(data['message'] ?? ''),
-        onTap: () => _markSingleAsRead(docId),
+    return ListTile(
+      tileColor: isRead ? Colors.transparent : AppTheme.primaryBlue.withValues(alpha: 0.05),
+      leading: CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.1),
+        child: Icon(icon, color: color),
       ),
+      title: Text(
+        data['title'] ?? 'Notification',
+        style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.bold),
+      ),
+      subtitle: Text(data['body'] ?? data['message'] ?? ''), // Safe fallback if you use 'body' field
+      onTap: () => _markSingleAsRead(docId),
     );
   }
 }
