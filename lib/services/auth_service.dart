@@ -13,7 +13,7 @@ class AuthService {
   String _generateRandomStudentId() {
     final random = Random();
     int randomNumber = 10000 + random.nextInt(90000); 
-    return 'TP$randomNumber';
+    return 'TP0$randomNumber';
   }
 
   // Sign In with Email and Password
