@@ -14,15 +14,22 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
   void _submit(bool isLogin) async {
     setState(() => _isLoading = true);
     var user = isLogin 
-      ? await _authService.signIn(_emailController.text, _passwordController.text)
-      : await _authService.register(_emailController.text, _passwordController.text);
+      ? await _authService.signIn(_emailController.text.trim(), _passwordController.text)
+      : await _authService.register(
+          _emailController.text.trim(), 
+          _passwordController.text,
+          name: _nameController.text.trim(), 
+          phone: _phoneController.text.trim(), 
+      );
     
     setState(() => _isLoading = false);
 

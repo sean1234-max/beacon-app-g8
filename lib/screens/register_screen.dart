@@ -9,11 +9,11 @@ import 'package:assignment/services/auth_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Ensure your web config is set up as discussed
-  runApp(const APUConnectApp());
+  runApp(const BeaconApp());
 }
 
-class APUConnectApp extends StatelessWidget {
-  const APUConnectApp({super.key});
+class BeaconApp extends StatelessWidget {
+  const BeaconApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -53,56 +53,59 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   bool _isLoading = false;
 
   void _register() async {
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
     final password = _passwordController.text.trim();
 
     // --- 1. Basic Validation ---
-    if (email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill in all fields")),
+        const SnackBar(content: Text("All fields are required.")),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    // --- 2. Domain-Based Role Logic ---
-    String assignedRole = 'student'; // Default role
-    if (email.endsWith('@mail.apu.edu.my')) {
-      assignedRole = 'student';
+    // --- 2. Validation to assign role ---
+    if (!email.endsWith('@mail.apu.edu.my')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registration is restricted to valid @mail.apu.edu.my student emails.")),
+      );
+      return;
     }
 
+    setState(() => _isLoading = true);
     // --- 3. Call AuthService with the role ---
     final user = await AuthService().register(
       email,
       password,
-      role: assignedRole, // This passes the role to your updated AuthService
+      name: name,
+      phone: phone,
+      role: 'student', 
     );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (user != null) {
-      // If successful, navigate back
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(assignedRole == 'club_leader'
-              ? "Club Leader account created!"
-              : "Student account created!"),
+        const SnackBar(
+          content: Text("Student account created successfully!"),
           backgroundColor: AppTheme.primaryBlue,
         ),
       );
     } else {
-      // Handle potential errors (e.g. weak password or email already in use)
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Registration failed. Please check your details.")),
+        const SnackBar(content: Text("Registration failed. Please check your details.")),
       );
     }
   }
@@ -128,7 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                "Join APU Connect",
+                "Join Beacon",
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -167,7 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 decoration: InputDecoration(
                   labelText: "Email Address",
                   hintText: "e.g. name@mail.apu.edu.my",
-                  helperText: "Use your official student email domain.",
+                  helperText: "Use your official student email domain",
                   helperStyle: TextStyle(color: Colors.grey[500]),
                   prefixIcon: const Icon(Icons.email_outlined),
                   border: OutlineInputBorder(
@@ -180,6 +183,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // Phone Input
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: "Phone number",
+                  hintText: "e.g. 0123456789",
+                  prefixIcon: const Icon(Icons.phone_android_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
 
               // Password Input
               TextField(
@@ -228,32 +246,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
               ),
               const SizedBox(height: 24),
-
-              // Helpful Testing Guide Callout Banner
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade100),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade700),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "Testing Tip: Registering with an @mail.apu.edu.my email automatically grants the Club Leader role.",
-                        style: TextStyle(
-                          color: Colors.blue.shade900,
-                          fontSize: 13,
-                          height: 1.3,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),

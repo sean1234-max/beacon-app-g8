@@ -25,7 +25,13 @@ class AuthService {
   }
 
   // Register with Email, Password, and Role
-  Future<User?> register(String email, String password, {String role = 'student'}) async {
+  Future<User?> register(
+    String email, 
+    String password, {
+    String role = 'student', 
+    required String name, 
+    required String phone,
+  }) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -33,11 +39,22 @@ class AuthService {
       );
 
       if (result.user != null) {
+        // Automatically isolate the TP number from your APU email domain if possible
+        String autoStudentId = 'TPXXXXXX';
+        final emailPrefix = email.split('@')[0];
+        if (emailPrefix.toLowerCase().startsWith('tp')) {
+          autoStudentId = emailPrefix.toUpperCase();
+        }
+
+        // Save customized data directly to your collection document path
         await _db.collection('users').doc(result.user!.uid).set({
+          'uid': result.user!.uid,
           'email': email,
-          'role': role,
-          'displayName': email.split('@')[0],
-          'studentId': 'TPXXXXXX',
+          'username': name,      // Saves the username parameter gathered from the text input field
+          'phone': phone,        
+          'role': role,          
+          'displayName': name,   
+          'studentId': autoStudentId,
           'isPrivate': false,
           'bio': 'New APU Student',
           'createdAt': FieldValue.serverTimestamp(),
