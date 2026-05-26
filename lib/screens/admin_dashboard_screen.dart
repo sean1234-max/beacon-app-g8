@@ -9,9 +9,10 @@ import '../theme/app_theme.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
-
+  
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
@@ -20,66 +21,101 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   
   // 1. Add the search query variable here so it persists
   String _userSearchQuery = ""; 
-
+  String _searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50], 
       appBar: AppBar(
-        title: const Text("APU Connect Admin"),
+        title: const Text(
+          "Beacon Admin", 
+          style: TextStyle(
+            color: Colors.white, 
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
         backgroundColor: AppTheme.primaryBlue,
+        elevation: 0, // Flat look for web/desktop dashboards
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: "Logout",
             onPressed: () => FirebaseAuth.instance.signOut(),
-          )
+          ),
+          const SizedBox(width: 12),
         ],
       ),
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (int index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            labelType: NavigationRailLabelType.all,
-            selectedIconTheme: const IconThemeData(color: AppTheme.primaryBlue),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.analytics_outlined),
-                selectedIcon: Icon(Icons.analytics),
-                label: Text('Overview'),
+          // --- THEME WRAPPER FOR SELECTION CAPSULE TINT ---
+          NavigationRailTheme(
+            data: NavigationRailThemeData(
+              indicatorColor: AppTheme.primaryBlue?.withOpacity(0.1),
+            ),
+            child: NavigationRail(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (int index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              backgroundColor: Colors.white,
+              labelType: NavigationRailLabelType.all,
+              minWidth: 80, 
+              useIndicator: true, 
+              selectedIconTheme: const IconThemeData(color: AppTheme.primaryBlue, size: 26),
+              unselectedIconTheme: IconThemeData(color: Colors.grey[600], size: 24),
+              selectedLabelTextStyle: const TextStyle(
+                color: AppTheme.primaryBlue, 
+                fontWeight: FontWeight.bold, 
+                fontSize: 12
               ),
-              NavigationRailDestination(
-                icon: Icon(Icons.fact_check_outlined),
-                selectedIcon: Icon(Icons.fact_check),
-                label: Text('Approvals'),
+              unselectedLabelTextStyle: TextStyle(
+                color: Colors.grey[600], 
+                fontWeight: FontWeight.w500, // Fixed naming alignment
+                fontSize: 12
               ),
-              NavigationRailDestination(
-                icon: Icon(Icons.event_note_outlined),
-                selectedIcon: Icon(Icons.event_note),
-                label: Text('Events'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.manage_accounts_outlined),
-                selectedIcon: Icon(Icons.manage_accounts),
-                label: Text('Users'),
-              ),
-              // ADD THIS 4th ITEM HERE
-              NavigationRailDestination(
-                icon: Icon(Icons.history_outlined),
-                selectedIcon: Icon(Icons.history),
-                label: Text('Logs'),
-              ),
-            ],
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(Icons.analytics_outlined),
+                  selectedIcon: Icon(Icons.analytics),
+                  label: Text('Overview'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.fact_check_outlined),
+                  selectedIcon: Icon(Icons.fact_check),
+                  label: Text('Approvals'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.event_note_outlined),
+                  selectedIcon: Icon(Icons.event_note),
+                  label: Text('Events'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.manage_accounts_outlined),
+                  selectedIcon: Icon(Icons.manage_accounts),
+                  label: Text('Roles'), 
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.history_outlined),
+                  selectedIcon: Icon(Icons.history),
+                  label: Text('Logs'),
+                ),
+              ],
+            ),
           ),
-          const VerticalDivider(thickness: 1, width: 1),
           
-          // 3. Main Content: We call the functions directly here
+          // Fine vertical line separating rail from content
+          VerticalDivider(thickness: 1, width: 1, color: Colors.grey[200]),
+          
+          // Main Dynamic Content Pane
           Expanded(
-            child: _getSelectedPage(),
+            child: Container(
+              color: Colors.grey[50], 
+              child: _getSelectedPage(),
+            ),
           ),
         ],
       ),
@@ -100,70 +136,199 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildLogsView() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text("System Activity Logs", 
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        ),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            // Use a specific limit to prevent loading thousands of logs at once
-            stream: FirebaseFirestore.instance
-                .collection('system_logs')
-                .orderBy('timestamp', descending: true)
-                .limit(100) 
-                .snapshots(),
-            builder: (context, snapshot) {
-              // 1. Handle Error state
-              if (snapshot.hasError) {
-                return Center(child: Text("Error: ${snapshot.error}"));
-              }
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Page Title & Header
+          const Text(
+            "System Activity Logs", 
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5)
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Immutable audit trail of administrative activities, access changes, and system modifications.",
+            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+          ),
+          const SizedBox(height: 24),
 
-              // 2. Handle Loading state (only if there is no data at all)
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              // 3. Handle Empty state
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text("No activity logs found."));
-              }
-
-              // 4. Data is ready
-              return ListView.builder(
-                itemCount: snapshot.data!.docs.length,
-                itemBuilder: (context, index) {
-                  final log = snapshot.data!.docs[index];
-                  final data = log.data() as Map<String, dynamic>;
-                  
-                  // Safely handle the timestamp
-                  final dynamic timestamp = data['timestamp'];
-                  DateTime? date;
-                  if (timestamp is Timestamp) {
-                    date = timestamp.toDate();
+          // --- THE LOG TABLE CONTAINER ---
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('system_logs')
+                    .orderBy('timestamp', descending: true)
+                    .limit(100) 
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Error loading logs: ${snapshot.error}"));
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text("No activity logs recorded yet."));
                   }
 
-                  return ListTile(
-                    leading: const Icon(Icons.history, color: Colors.blueGrey),
-                    title: Text(data['action'] ?? "Unknown Action"),
-                    subtitle: Text("Admin: ${data['adminEmail']}\nTarget: ${data['targetId']}"),
-                    isThreeLine: true,
-                    trailing: Text(
-                      date != null 
-                        ? "${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}" 
-                        : "Syncing...",
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
+                  final logs = snapshot.data!.docs;
+
+                  return Column(
+                    children: [
+                      // TABLE HEADERS
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                          border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(flex: 3, child: Text("ACTION", style: _tableHeaderStyle())),
+                            Expanded(flex: 4, child: Text("OPERATOR (ADMIN)", style: _tableHeaderStyle())),
+                            Expanded(flex: 3, child: Text("TARGET OBJECT ID", style: _tableHeaderStyle())),
+                            Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text("TIMESTAMP", style: _tableHeaderStyle()))),
+                          ],
+                        ),
+                      ),
+                      
+                      // TABLE BODY ROWS
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: logs.length,
+                          separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[100]),
+                          itemBuilder: (context, index) {
+                            final data = logs[index].data() as Map<String, dynamic>;
+                            
+                            // Parse Timestamp Safely
+                            final dynamic timestamp = data['timestamp'];
+                            DateTime? date = timestamp is Timestamp ? timestamp.toDate() : null;
+                            String formattedTime = date != null 
+                                ? "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}"
+                                : "Syncing...";
+
+                            final String action = data['action'] ?? "UNKNOWN_ACTION";
+                            final String adminEmail = data['adminEmail'] ?? data['performedBy'] ?? "System";
+                            final String targetId = data['targetId'] ?? "N/A";
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                              color: Colors.white,
+                              child: Row(
+                                children: [
+                                  // COLUMN 1: Action Badge
+                                  Expanded(
+                                    flex: 3,
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: _buildActionBadge(action),
+                                    ),
+                                  ),
+                                  // COLUMN 2: Admin Identifier
+                                  Expanded(
+                                    flex: 4,
+                                    child: Text(
+                                      adminEmail,
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black87),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  // COLUMN 3: Target Resource Referenced ID
+                                  Expanded(
+                                    flex: 3,
+                                    child: Text(
+                                      targetId.length > 12 ? "${targetId.substring(0, 12)}..." : targetId,
+                                      style: TextStyle(fontSize: 13, fontFamily: 'Courier', color: Colors.grey[700]), // Monospace aesthetic for IDs
+                                    ),
+                                  ),
+                                  // COLUMN 4: Timestamp
+                                  Expanded(
+                                    flex: 2,
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        formattedTime,
+                                        style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w400),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   );
                 },
-              );
-            },
+              ),
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // Helper Text Style for Columns
+  TextStyle _tableHeaderStyle() {
+    return TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.bold,
+      color: Colors.grey[600],
+      letterSpacing: 1.0,
+    );
+  }
+
+  // Custom Badge Builder for Enterprise Log Categorization
+  Widget _buildActionBadge(String action) {
+    Color backgroundColor;
+    Color textColor;
+
+    // Dynamically assign theme tokens based on your system triggers
+    if (action.contains('APPROVE') || action.contains('CREATE')) {
+      backgroundColor = Colors.green[50]!;
+      textColor = Colors.green[700]!;
+    } else if (action.contains('BAN') || action.contains('DELETE') || action.contains('REJECT')) {
+      backgroundColor = Colors.red[50]!;
+      textColor = Colors.red[700]!;
+    } else if (action.contains('UPDATE') || action.contains('UNBAN')) {
+      backgroundColor = Colors.blue[50]!;
+      textColor = Colors.blue[700]!;
+    } else {
+      backgroundColor = Colors.grey[100]!;
+      textColor = Colors.grey[700]!;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        action.replaceAll('_', ' '), // Makes "USER_BANNED" read beautifully as "USER BANNED"
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+          letterSpacing: 0.3,
         ),
-      ],
+      ),
     );
   }
 
@@ -415,14 +580,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _actionButton(
           "Export User List", 
           Icons.download, 
-          Colors.grey, 
+          AppTheme.primaryBlue, 
           onTap: () => _exportData('users'), 
         ),
         const SizedBox(width: 12),
         _actionButton(
           "System Logs", 
           Icons.terminal, 
-          Colors.grey, 
+          AppTheme.primaryBlue, 
           onTap: () {
             setState(() {
               _selectedIndex = 3; 
@@ -504,46 +669,82 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             return Card(
               elevation: 2,
               margin: const EdgeInsets.symmetric(vertical: 8),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.blueAccent,
-                  child: Icon(Icons.group_add, color: Colors.white),
-                ),
-                title: Text(
-                  club['name'] ?? "Unknown Club",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text("Category: ${club['category']}\nLeader: ${club['leaderId'].toString().substring(0, 8)}..."),
-                ),
-                isThreeLine: true, // Gives more vertical space
-                trailing: Column( // Using Column instead of Row to avoid horizontal overflow
-                  mainAxisAlignment: MainAxisAlignment.center,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0), // Adds uniform padding inside the card
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    ElevatedButton(
-                      onPressed: () => _handleApproval(
-                        club.id, 
-                        'approved', 
-                        club['name'] ?? 'Unknown Club',   // Sending the club name
-                        club['leaderId'] ?? '',           // Sending the leader's UID
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      child: const Text("Approve", style: TextStyle(color: Colors.white, fontSize: 12)),
+                    // 1. LEADING ICON
+                    const CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.blueAccent,
+                      child: Icon(Icons.group_add, color: Colors.white, size: 24),
                     ),
-                    TextButton(
-                      onPressed: () => _showRejectDialog(
-                        context, 
-                        club.id, 
-                        club['name'] ?? 'Unknown Club', 
-                        club['leaderId'] ?? ''
-                      ), 
-                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                      child: const Text("Reject", style: TextStyle(color: Colors.red, fontSize: 12)),
+                    const SizedBox(width: 16),
+
+                    // 2. TEXT INFO (Expanded so it pushes the buttons to the far right)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            club['name'] ?? "Unknown Club",
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Category: ${club['category']}\nLeader: ${club['leaderId'].toString().substring(0, 8)}...",
+                            style: TextStyle(color: Colors.grey[700], height: 1.3),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // 3. VERTICAL BUTTONS SIDE
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // APPROVE BUTTON
+                        ElevatedButton(
+                          onPressed: () => _handleApproval(
+                            club.id, 
+                            'approved', 
+                            club['name'] ?? 'Unknown Club',   
+                            club['leaderId'] ?? '',           
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(100, 36), // Forces both buttons to be equal width
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text("Approve", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        ),
+                        
+                        const SizedBox(height: 8), // Clean spacing between stacked buttons
+                        
+                        // REJECT BUTTON (Matches Approve style but in Red)
+                        ElevatedButton(
+                          onPressed: () => _showRejectDialog(
+                            context, 
+                            club.id, 
+                            club['name'] ?? 'Unknown Club', 
+                            club['leaderId'] ?? ''
+                          ), 
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red, // Solid red background banner
+                            foregroundColor: Colors.white, // Pure white text words
+                            minimumSize: const Size(100, 36), // Matches Approve button size perfectly
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text("Reject", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -961,45 +1162,105 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const Text("Manage All Events", 
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const Text("As an admin, you can remove events that violate community standards."),
-          const SizedBox(height: 20),
+          
+          const SizedBox(height: 16),
+          
+          // --- ADDED SEARCH BAR CONTAINER ---
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 2,
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase(); // Triggers rebuild on every keystroke
+                });
+              },
+              decoration: InputDecoration(
+                hintText: "Search events by title...",
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          setState(() {
+                            _searchQuery = "";
+                          });
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16), // Spacing between Search Bar and List
+          
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('events').snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-                final events = snapshot.data!.docs;
+                // 1. Get raw documents from Firebase
+                final allEvents = snapshot.data!.docs;
+
+                // 2. Filter events matching the search query locally
+                final filteredEvents = allEvents.where((event) {
+                  final Map<String, dynamic> data = event.data() as Map<String, dynamic>;
+                  final String title = (data['title'] ?? "").toString().toLowerCase();
+                  final String description = (data['description'] ?? "").toString().toLowerCase();
+                  
+                  // Matches if search text is found in either title or description
+                  return title.contains(_searchQuery) || description.contains(_searchQuery);
+                }).toList();
+
+                // 3. Fallback if search returns nothing
+                if (filteredEvents.isEmpty) {
+                  return const Center(
+                    child: Text("No events found matching your search.", 
+                      style: TextStyle(color: Colors.grey)),
+                  );
+                }
 
                 return ListView.builder(
-                  itemCount: events.length,
+                  itemCount: filteredEvents.length,
                   itemBuilder: (context, index) {
-                    final event = events[index];
+                    final event = filteredEvents[index];
                     final Map<String, dynamic> data = event.data() as Map<String, dynamic>;
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                      elevation: 1,
                       child: ListTile(
                         leading: const Icon(Icons.event_note, color: Colors.red),
                         title: Text(
                           data.containsKey('title') ? data['title'] : "Untitled Event",
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        
-                        // SWITCHED FROM clubName TO description
                         subtitle: Text(
                           data.containsKey('description') 
                               ? data['description'] 
                               : "No description provided.",
-                          maxLines: 2, // Keeps the card height consistent
-                          overflow: TextOverflow.ellipsis, // Adds "..." if text is too long
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         onTap: () => _showEventDetails(context, data),
-
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_sweep, color: Colors.red),
                           onPressed: () => _confirmDelete(event.id),
                         ),
-                        isThreeLine: true, // Optimizes spacing for longer descriptions
+                        isThreeLine: true,
                       ),
                     );
                   },
