@@ -145,15 +145,39 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     setState(() => _isRegistering = true);
 
     try {
+      // 1. Process unregistration across all Firestore targets
       await DatabaseService().leaveEvent(widget.event.id, userId!);
 
+      // 2. ADDED: Save unregistration notification document to user subcollection
+      final String eventTitle = widget.event.title ?? "the event";
+      
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .add({
+        'title': "Left Event Confirmation",
+        'body': "You have successfully unregistered from '$eventTitle'.",
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'type': 'event_unregistration',
+        'eventId': widget.event.id,
+      });
+
       if (mounted) {
+        // 3. Show brief confirmation snackbar
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("You have left the event.")));
+        
+        // 4. Navigate back to the Event Dashboard screen
         Navigator.pop(context);
       }
     } catch (e) {
       debugPrint("Unregister Error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Failed to leave event: $e")));
+      }
     } finally {
       if (mounted) setState(() => _isRegistering = false);
     }

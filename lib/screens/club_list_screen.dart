@@ -703,6 +703,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
       String clubId, String clubName) {
     final bool isTargetOwner = member['userId'] == leaderId;
     final bool isMeOwner = _currentUserId == leaderId;
+    // Check if this specific tile belongs to the logged-in student
+    final bool isMe = member['userId'] == _currentUserId;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
@@ -741,44 +743,120 @@ class _ClubsScreenState extends State<ClubsScreen> {
             if (isTargetOwner) ...[
               const SizedBox(width: 8),
               _buildBadge("OWNER", Colors.orange),
+            ] else if (isMe) ...[
+              const SizedBox(width: 8),
+              _buildBadge("YOU", AppTheme.primaryBlue), // Tag to make it obvious
             ],
           ],
         ),
         subtitle: Text(member['bio'] ?? "No bio available", maxLines: 1),
-        trailing: (isMeOwner && !isTargetOwner)
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: "Transfer Leadership",
-                    icon: const Icon(Icons.swap_horiz,
-                        color: AppTheme.primaryBlue, size: 22),
-                    onPressed: () => _confirmTransfer(
-                      member['userId'],
-                      member['name'],
-                      clubId,
-                      clubName,
+        trailing: () {
+          // Case A: You are the Owner, manage other members
+          if (isMeOwner && !isTargetOwner) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: "Transfer Leadership",
+                  icon: const Icon(Icons.swap_horiz,
+                      color: AppTheme.primaryBlue, size: 22),
+                  onPressed: () => _confirmTransfer(
+                    member['userId'],
+                    member['name'],
+                    clubId,
+                    clubName,
                     ),
                   ),
-                  IconButton(
-                    tooltip: "Remove Member",
-                    icon: const Icon(Icons.person_remove_outlined,
-                        color: Colors.redAccent, size: 22),
-                    onPressed: () => _confirmRemoveMember(
-                      member.id,
-                      member['name'],
-                      member['userId'],
-                      clubName,
-                      clubId,
-                    ),
+                IconButton(
+                  tooltip: "Remove Member",
+                  icon: const Icon(Icons.person_remove_outlined,
+                      color: Colors.redAccent, size: 22),
+                  onPressed: () => _confirmRemoveMember(
+                    member.id,
+                    member['name'],
+                    member['userId'],
+                    clubName,
+                    clubId,
                   ),
-                ],
-              )
-            : null,
+                ),
+              ],
+            );
+          } 
+          
+          // Case B: This is your own tile, and you aren't the owner -> Show Leave Button
+          if (isMe && !isTargetOwner) {
+            return TextButton.icon(
+              label: const Text("Leave", style: TextStyle(color: Colors.red)),
+              icon: const Icon(Icons.logout, color: Colors.red, size: 18),
+              onPressed: () => _leaveClub(member.id, clubId, clubName),
+            );
+          }
+
+          return null; // Return nothing for other regular members
+        }(),
       ),
     );
   }
 
+  Future<void> _leaveClub(String registrationId, String clubId, String clubName) async {
+    final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text("Leave $clubName?"),
+            content: const Text(
+                "Are you sure you want to leave this club? Your activity and roles will be removed."),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text("Cancel")),
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text("Leave", style: TextStyle(color: Colors.red))),
+            ],
+          ),
+        ) ?? false;
+
+    if (!confirm) return;
+
+    try {
+      // 1. Delete membership entry from registrations collection
+      await FirebaseFirestore.instance
+          .collection('registrations')
+          .doc(registrationId)
+          .delete();
+
+      // 2. Remove user ID out of the club's 'members' field tracker array
+      await FirebaseFirestore.instance.collection('clubs').doc(clubId).update({
+        'members': FieldValue.arrayRemove([_currentUserId])
+      });
+
+      // 3. Remove club ID out of the user's personal 'joinedClubs' tracking array
+      await FirebaseFirestore.instance.collection('users').doc(_currentUserId).update({
+        'joinedClubs': FieldValue.arrayRemove([clubId])
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("You left $clubName"), 
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        
+        // ✅ FIXED: Pops past the current dialog and dashboard widgets, 
+        // stopping exactly when it hits the main interface shell (the very first route).
+        Navigator.popUntil(context, (route) => route.isFirst);
+      }
+    } catch (e) {
+      debugPrint("Error leaving club: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to leave club: $e")),
+        );
+      }
+    }
+  }
+  
   Widget _buildBadge(String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

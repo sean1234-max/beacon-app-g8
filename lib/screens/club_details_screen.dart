@@ -45,13 +45,12 @@ class ClubDetailsScreen extends StatelessWidget {
         'joinedAt': FieldValue.serverTimestamp(),
       });
 
-      // --- NEW: UPDATE CLUB DOCUMENT ARRAY ---
-      // This makes your "Quick Stats" count dynamic and instant
+      // --- UPDATE CLUB DOCUMENT ARRAY ---
       await FirebaseFirestore.instance.collection('clubs').doc(club.id).update({
         'members': FieldValue.arrayUnion([user.uid])
       });
 
-      // --- NEW: RECENT UPDATES ANNOUNCEMENT ---
+      // --- RECENT UPDATES ANNOUNCEMENT ---
       await FirebaseFirestore.instance
           .collection('clubs')
           .doc(club.id)
@@ -75,6 +74,7 @@ class ClubDetailsScreen extends StatelessWidget {
         type: "approval",
       );
 
+      // 6. Notify parent layout and exit details view cleanly
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -82,12 +82,21 @@ class ClubDetailsScreen extends StatelessWidget {
             backgroundColor: Colors.green,
           ),
         );
+
+        // ✅ PASS RESULT BACK: Closes the details page and signals 
+        // club_list_screen.dart to transition smoothly to the dashboard route.
+        Navigator.pop(context, true);
       }
     } catch (e) {
       debugPrint("Error joining club: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to join club: $e")),
+        );
+      }
     }
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
