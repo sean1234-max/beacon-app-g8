@@ -56,6 +56,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     checkAndNotifyExpiredEvents();
   }
 
+  void switchTab(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
   void _fetchUserRole() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -212,19 +216,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             const Spacer(),
             ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text("Logout"),
-              onTap: () async {
-                await AuthService().signOut();
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: const Text("Logout"),
+                onTap: () async {
+                  await AuthService().signOut();
 
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil (
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-                  );
-                }
-              }
-            ),
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                          builder: (context) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                }),
           ],
         ),
       ),
@@ -358,7 +362,7 @@ class EventListView extends StatelessWidget {
 
                   // If there are no joined events, completely remove this UI section
                   if (registeredEvents.isEmpty) {
-                    return const SizedBox.shrink(); 
+                    return const SizedBox.shrink();
                   }
 
                   // If there are events, render the schedule layout normally
@@ -367,10 +371,11 @@ class EventListView extends StatelessWidget {
                     children: [
                       const Text(
                         "Your Upcoming Schedule",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       // --- THE SINGLE CORRECT CALENDAR ---
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -422,7 +427,8 @@ class EventListView extends StatelessWidget {
                           calendarStyle: CalendarStyle(
                             markersMaxCount: 0,
                             todayDecoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withValues(alpha: 0.15),
+                              color:
+                                  AppTheme.primaryBlue.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
                             todayTextStyle: const TextStyle(
@@ -457,7 +463,8 @@ class EventListView extends StatelessWidget {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => EventDetailsScreen(event: event),
+                                    builder: (context) =>
+                                        EventDetailsScreen(event: event),
                                   ),
                                 );
                               },
@@ -470,7 +477,8 @@ class EventListView extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(15),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.1),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.1),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     )
@@ -491,14 +499,23 @@ class EventListView extends StatelessWidget {
                                     ),
                                     const Spacer(),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
-                                        const Icon(Icons.qr_code_2, color: Colors.white70, size: 32),
+                                        const Icon(Icons.qr_code_2,
+                                            color: Colors.white70, size: 32),
                                         Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
                                           children: [
-                                            const Text("Entry Pass", style: TextStyle(color: Colors.white70, fontSize: 10)),
-                                            Text(event.date, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                            const Text("Entry Pass",
+                                                style: TextStyle(
+                                                    color: Colors.white70,
+                                                    fontSize: 10)),
+                                            Text(event.date,
+                                                style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12)),
                                           ],
                                         )
                                       ],
@@ -510,7 +527,9 @@ class EventListView extends StatelessWidget {
                           },
                         ),
                       ),
-                      const SizedBox(height: 24), // Extra spacer before the "Discover Events" section begins
+                      const SizedBox(
+                          height:
+                              24), // Extra spacer before the "Discover Events" section begins
                     ],
                   );
                 },
@@ -530,8 +549,8 @@ class EventListView extends StatelessWidget {
                 stream: DatabaseService().getEvents(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    print("DEBUG EVENT ERROR: ${snapshot.error}"); 
-                    
+                    print("DEBUG EVENT ERROR: ${snapshot.error}");
+
                     return const Center(child: Text("Error loading events"));
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {

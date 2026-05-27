@@ -5,30 +5,26 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 
-class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+class EditBioScreen extends StatefulWidget {
+  const EditBioScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  State<EditBioScreen> createState() => _EditBioScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditBioScreenState extends State<EditBioScreen> {
   final user = FirebaseAuth.instance.currentUser;
   final _formKey = GlobalKey<FormState>();
 
   // Controllers to handle text input
-  late TextEditingController _nameController;
   late TextEditingController _bioController;
-  late TextEditingController _studentIdController;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     // Initialize controllers with current user data
-    _nameController = TextEditingController(text: user?.displayName ?? "");
     _bioController = TextEditingController();
-    _studentIdController = TextEditingController();
     _loadUserData();
   }
 
@@ -41,18 +37,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (doc.exists) {
       setState(() {
         _bioController.text = doc.data()?['bio'] ?? "";
-        _studentIdController.text = doc.data()?['studentId'] ?? "";
       });
     }
   }
 
-  Future<void> _updateProfile() async {
+  Future<void> _updateBio() async {
     await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
-      'name': _nameController
-          .text, // Changed from displayName to name for consistency
       'bio': _bioController.text,
-      'studentId':
-          _studentIdController.text.toUpperCase(), // Normalize to uppercase
       'lastUpdated': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -61,20 +52,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Update Firebase Auth (Display Name)
-      await user?.updateDisplayName(_nameController.text);
-
-      // 2. Update Firestore (Bio, Student ID, Name)
+      // 1. Update Firestore (Bio, Student ID, Name)
       await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
-        'displayName': _nameController.text,
         'bio': _bioController.text,
-        'studentId': _studentIdController.text,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Profile Updated Successfully!")),
+          const SnackBar(content: Text("Bio Updated Successfully!")),
         );
         Navigator.pop(context); // Go back to Profile Screen
       }
@@ -91,7 +77,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Edit Profile"),
+        title: const Text("Edit Bio"),
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
       ),
@@ -103,53 +89,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    const Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.grey,
-                          child:
-                              Icon(Icons.person, size: 50, color: Colors.white),
-                        ),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: AppTheme.primaryBlue,
-                          child: Icon(Icons.camera_alt,
-                              size: 18, color: Colors.white),
-                        ),
-                      ],
-                    ),
+                    // const Stack(
+                    //   alignment: Alignment.bottomRight,
+                    //   children: [
+                    //     CircleAvatar(
+                    //       radius: 50,
+                    //       backgroundColor: Colors.grey,
+                    //       child:
+                    //           Icon(Icons.person, size: 50, color: Colors.white),
+                    //     ),
+                    //     CircleAvatar(
+                    //       radius: 18,
+                    //       backgroundColor: AppTheme.primaryBlue,
+                    //       child: Icon(Icons.camera_alt,
+                    //           size: 18, color: Colors.white),
+                    //     ),
+                    //   ],
+                    // ),
                     const SizedBox(height: 30),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: "Full Name",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      validator: (val) =>
-                          val!.isEmpty ? "Enter your name" : null,
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _studentIdController,
-                      decoration: const InputDecoration(
-                        labelText: "Student ID (e.g., TP012345)",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.badge),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.isEmpty) {
-                          return "Student ID is required";
-                        }
-                        if (!RegExp(r'^[Tt][Pp]\d{6}$').hasMatch(val)) {
-                          return "Enter a valid ID (e.g., TP012345)";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
                     TextFormField(
                       controller: _bioController,
                       maxLines: 3,
@@ -164,7 +121,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _updateProfile,
+                        onPressed: _updateBio,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryBlue,
                           foregroundColor: Colors.white,
