@@ -215,20 +215,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               onTap: () => setState(() => _selectedIndex = 0),
             ),
             const Spacer(),
-            ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text("Logout"),
-                onTap: () async {
-                  await AuthService().signOut();
-
-                  if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                          builder: (context) => const LoginScreen()),
-                      (route) => false,
-                    );
-                  }
-                }),
+ListTile(
+  leading: const Icon(Icons.logout, color: Colors.red),
+  title: const Text("Logout"),
+  onTap: () async {
+    try {
+      await FirebaseAuth.instance.signOut();
+  
+      if (context.mounted) {
+        // Clear navigation stacks cleanly and route back to entry lock screen
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      debugPrint("Logout runtime processing error: ${e.toString()}");
+    }
+  },
+),
           ],
         ),
       ),
