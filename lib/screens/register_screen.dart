@@ -131,11 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-<<<<<<< HEAD
-                "Join Beacon",
-=======
                 "Join Beacon Today",
->>>>>>> e81ee85b4f7c1186bb2125f6735699279b783c62
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
