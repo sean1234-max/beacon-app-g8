@@ -223,7 +223,6 @@ ListTile(
       await FirebaseAuth.instance.signOut();
   
       if (context.mounted) {
-        // Clear navigation stacks cleanly and route back to entry lock screen
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
           (route) => false,
