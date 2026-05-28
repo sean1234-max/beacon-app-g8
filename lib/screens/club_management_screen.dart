@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../models/notification_service.dart';
 import '../theme/app_theme.dart';
+import 'add_event_screen.dart';
 
 class ClubManagementScreen extends StatefulWidget {
   const ClubManagementScreen({super.key});
@@ -395,7 +396,11 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
         'title': 'Post Event',
         'sub': 'Create a new event',
         'onTap': () {
-          _showPostEventSheet(clubId, club);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => AddEventScreen(clubId: clubId)),
+          );
         },
       },
       {
@@ -408,7 +413,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
       },
       {
         'icon': Icons.swap_horiz_rounded,
-        'title': 'Transfer\nLeadership',
+        'title': 'Transfers Leadership',
         'sub': 'Pass your role',
         'onTap': () {
           _showTransferLeadershipSheet(clubId, club);
@@ -862,150 +867,6 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
   // ═══════════════════════════════════════════════════════════════
   //  BOTTOM SHEETS
   // ═══════════════════════════════════════════════════════════════
-
-  // ── Post Event ───────────────────────────────────────────────
-
-  void _showPostEventSheet(String clubId, Map<String, dynamic> club) {
-    final titleCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    final locationCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) {
-        DateTime? selectedDate;
-        return StatefulBuilder(
-          builder: (ctx, setSS) => Padding(
-            padding:
-                EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _sheetHeader(ctx, 'Post Event'),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  child: Column(
-                    children: [
-                      TextField(
-                          controller: titleCtrl,
-                          decoration:
-                              const InputDecoration(labelText: 'Event Title')),
-                      const SizedBox(height: 12),
-                      TextField(
-                          controller: descCtrl,
-                          maxLines: 2,
-                          decoration: const InputDecoration(
-                              labelText: 'Description',
-                              alignLabelWithHint: true)),
-                      const SizedBox(height: 12),
-                      TextField(
-                          controller: locationCtrl,
-                          decoration:
-                              const InputDecoration(labelText: 'Location')),
-                      const SizedBox(height: 12),
-                      GestureDetector(
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: ctx,
-                            initialDate:
-                                DateTime.now().add(const Duration(days: 1)),
-                            firstDate: DateTime.now(),
-                            lastDate:
-                                DateTime.now().add(const Duration(days: 365)),
-                          );
-                          if (picked != null) {
-                            setSS(() => selectedDate = picked);
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_today_rounded,
-                                  size: 16, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Text(
-                                selectedDate != null
-                                    ? DateFormat('dd MMM yyyy')
-                                        .format(selectedDate!)
-                                    : 'Pick a date',
-                                style: TextStyle(
-                                    color: selectedDate != null
-                                        ? Colors.black87
-                                        : Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (titleCtrl.text.trim().isEmpty ||
-                                selectedDate == null) return;
-                            try {
-                              await FirebaseFirestore.instance
-                                  .collection('events')
-                                  .add({
-                                'title': titleCtrl.text.trim(),
-                                'description': descCtrl.text.trim(),
-                                'location': locationCtrl.text.trim(),
-                                'clubId': clubId,
-                                'creatorId': _currentUserId,
-                                'dateTime': Timestamp.fromDate(selectedDate!),
-                                'participants': [],
-                                'status': 'upcoming',
-                              });
-                              final mSnap = await FirebaseFirestore.instance
-                                  .collection('registrations')
-                                  .where('clubId', isEqualTo: clubId)
-                                  .get();
-                              for (final m in mSnap.docs) {
-                                final uid = (m.data())['userId'] as String?;
-                                if (uid != null) {
-                                  await NotificationService.sendNotification(
-                                    userId: uid,
-                                    title:
-                                        '📅 New Event: ${titleCtrl.text.trim()}',
-                                    message:
-                                        '${club['name']} posted a new event. Tap to register!',
-                                    type: 'event',
-                                  );
-                                }
-                              }
-                              if (mounted) Navigator.pop(ctx);
-                              _showSnackBar(
-                                  'Event posted and members notified!',
-                                  Colors.green);
-                            } catch (e) {
-                              _showSnackBar('Error: $e', Colors.red);
-                            }
-                          },
-                          child: const Text('Post Event'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   // ── Announcement ─────────────────────────────────────────────
 
   void _showAnnouncementSheet(String clubId, Map<String, dynamic> club) {

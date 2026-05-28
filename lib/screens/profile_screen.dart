@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,6 +13,7 @@ import 'edit_bio_screen.dart';
 import 'privacy_security_screen.dart';
 import 'event_history_screen.dart';
 import 'club_management_screen.dart';
+import 'club_list_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -273,22 +276,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ─────────────────────────────────────────────
 
   Widget _buildStatsRow() {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
+          // EVENTS — count events the user has registered for
           Expanded(
-            child: _buildStatCard(Icons.calendar_today_rounded, '12', 'EVENTS'),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('events')
+                  .where('participants', arrayContains: uid)
+                  .snapshots(),
+              builder: (context, snap) {
+                final count = snap.data?.docs.length ?? 0;
+                return _buildStatCard(
+                  Icons.calendar_today_rounded,
+                  '$count',
+                  'EVENTS',
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MyTicketsScreen())),
+                );
+              },
+            ),
           ),
           const SizedBox(width: 12),
+          // CLUBS — count clubs the user has joined
           Expanded(
-            child: _buildStatCard(Icons.people_rounded, '4', 'CLUBS'),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('registrations')
+                  .where('userId', isEqualTo: uid)
+                  .snapshots(),
+              builder: (context, snap) {
+                final count = snap.data?.docs.length ?? 0;
+                return _buildStatCard(
+                  Icons.people_rounded,
+                  '$count',
+                  'CLUBS',
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const ClubsScreen())),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
-
   // ─────────────────────────────────────────────
   //  QUICK ACTIONS
   // ─────────────────────────────────────────────
@@ -586,28 +624,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatCard(IconData icon, String count, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: const Color(0xFF003366), size: 26),
-          const SizedBox(height: 8),
-          Text(count,
-              style:
-                  const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 2),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1)),
-        ],
+  Widget _buildStatCard(IconData icon, String count, String label,
+      {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: const Color(0xFF003366), size: 26),
+            const SizedBox(height: 8),
+            Text(count,
+                style:
+                    const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1)),
+          ],
+        ),
       ),
     );
   }

@@ -8,7 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class AddEventScreen extends StatefulWidget {
-  const AddEventScreen({super.key});
+  final String clubId;
+  const AddEventScreen({super.key, this.clubId = ''});
 
   @override
   State<AddEventScreen> createState() => _AddEventScreenState();
@@ -191,6 +192,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
         'picPhone': _picPhoneController.text.trim(),
         'paymentType': _isPaid ? 'paid' : 'free',
         'creatorId': user.uid,
+        'clubId': widget.clubId,
         'participants': [],
         'createdAt': FieldValue.serverTimestamp(),
       };
@@ -442,9 +444,9 @@ class _AddEventScreenState extends State<AddEventScreen> {
                       right: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.black54,
-                          borderRadius: const BorderRadius.vertical(
+                          borderRadius: BorderRadius.vertical(
                               bottom: Radius.circular(15)),
                         ),
                         child: const Row(
@@ -872,9 +874,9 @@ class _AddEventScreenState extends State<AddEventScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11,
-                          color: Colors.grey[500],
+                          color: Colors.black87,
                           fontWeight: FontWeight.w500)),
                   const SizedBox(height: 2),
                   Text(

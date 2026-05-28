@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../models/club_model.dart';
 import '../widgets/club_card.dart';
 import 'club_details_screen.dart';
+import 'add_event_screen.dart';
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({super.key});
@@ -223,252 +224,374 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
   Widget _buildClubManagementInterface(DocumentSnapshot clubDoc) {
     final data = clubDoc.data() as Map<String, dynamic>;
+    final String category = data['category'] ?? '';
+    final String name = data['name'] ?? '';
+    final String description = data['description'] ?? '';
+    final int maxMembers = (data['maxMembers'] as num?)?.toInt() ?? 200;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        slivers: [
-          // Hero header
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                data['name'],
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(color: AppTheme.primaryBlue),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.7)
+      backgroundColor: const Color(0xFFF2F4F8),
+      body: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('registrations')
+              .where('clubId', isEqualTo: clubDoc.id)
+              .snapshots(),
+          builder: (context, regSnapshot) {
+            final int memberCount = regSnapshot.data?.docs.length ?? 0;
+
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('clubs')
+                  .doc(clubDoc.id)
+                  .collection('events')
+                  .snapshots(),
+              builder: (context, eventSnapshot) {
+                final int eventCount = eventSnapshot.data?.docs.length ?? 0;
+
+                return ListView(
+                  children: [
+                    // ── Hero Card ──────────────────────────────────────
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0A1628), Color(0xFF122140)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: const Icon(
+                                Icons.arrow_back_ios_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Icon(_categoryIcon(category),
+                                      color: Colors.white, size: 32),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (category.isNotEmpty)
+                                        _heroPill(
+                                          category.toUpperCase(),
+                                          Colors.white70,
+                                          Colors.white.withValues(alpha: 0.12),
+                                        ),
+                                      const SizedBox(height: 8),
+                                      Text(name,
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold)),
+                                      if (description.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(description,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                                color: Colors.white
+                                                    .withValues(alpha: 0.65),
+                                                fontSize: 12,
+                                                height: 1.4)),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _heroStat('MEMBERS',
+                                        '$memberCount / $maxMembers'),
+                                  ),
+                                  Container(
+                                      width: 1,
+                                      height: 32,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.2)),
+                                  Expanded(
+                                    child: _heroStat('EVENTS', '$eventCount'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Management Tools",
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1.3,
+                            children: [
+                              _buildToolCard(
+                                "Post Update",
+                                Icons.campaign,
+                                Colors.orange,
+                                () => _showPostUpdateSheet(context, clubDoc.id),
+                              ),
+                              _buildToolCard(
+                                "Manage Members",
+                                Icons.manage_accounts,
+                                Colors.teal,
+                                () {
+                                  final String leaderId =
+                                      data['leaderId'] ?? '';
+                                  final bool isMeOwner =
+                                      (leaderId == _currentUserId);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => Scaffold(
+                                        backgroundColor: Colors.grey[50],
+                                        appBar: AppBar(
+                                          title: const Text("Club Members",
+                                              style: TextStyle(
+                                                  color: Colors.black)),
+                                          backgroundColor: Colors.white,
+                                          elevation: 0.5,
+                                          iconTheme: const IconThemeData(
+                                              color: Colors.black),
+                                        ),
+                                        body: _buildMemberTab(
+                                            clubDoc, leaderId, isMeOwner),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              _buildToolCard(
+                                "Event Planner",
+                                Icons.calendar_today,
+                                Colors.indigo,
+                                () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => AddEventScreen(
+                                            clubId: clubDoc.id))),
+                              ),
+                              _buildToolCard(
+                                "Club Chat",
+                                Icons.chat_bubble_outline,
+                                Colors.pink,
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ClubChatScreen(club: clubDoc),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          const Text("Upcoming Events",
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('clubs')
+                                .doc(clubDoc.id)
+                                .collection('events')
+                                .orderBy('date', descending: false)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) return const SizedBox();
+                              final events = snapshot.data!.docs;
+                              if (events.isEmpty) {
+                                return Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Center(
+                                      child: Text("No events planned yet.")),
+                                );
+                              }
+                              return SizedBox(
+                                height: 160,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: events.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildEventCard(events[index],
+                                        clubDoc.id, data['leaderId']);
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          const Text("Recent Updates",
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('clubs')
+                                .doc(clubDoc.id)
+                                .collection('updates')
+                                .orderBy('timestamp', descending: true)
+                                .limit(5)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) return const SizedBox();
+                              final updates = snapshot.data!.docs;
+                              return Column(
+                                children: updates.map((doc) {
+                                  final updateData =
+                                      doc.data() as Map<String, dynamic>;
+                                  final bool isWelcome = updateData['content']
+                                      .toString()
+                                      .contains("Welcome");
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      side:
+                                          BorderSide(color: Colors.grey[200]!),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ListTile(
+                                      leading: CircleAvatar(
+                                        backgroundColor: isWelcome
+                                            ? Colors.blueAccent
+                                            : Colors.orangeAccent,
+                                        child: Icon(
+                                          isWelcome
+                                              ? Icons.person_add
+                                              : Icons.campaign,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        updateData['content'] ?? "",
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                      subtitle: Text(
+                                        "${updateData['authorName']} • ${_formatTimestamp(updateData['timestamp'])}",
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[600]),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 36),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                  ],
+                );
+              },
+            );
+          }),
+    );
+  }
 
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Quick stats row
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('clubs')
-                        .doc(clubDoc.id)
-                        .collection('events')
-                        .snapshots(),
-                    builder: (context, eventSnapshot) {
-                      final int eventCount =
-                          eventSnapshot.data?.docs.length ?? 0;
-                      final List membersList = data['members'] ?? [];
-                      final int memberCount = membersList.length;
+  IconData _categoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'technology':
+      case 'tech':
+        return Icons.computer_rounded;
+      case 'sports':
+        return Icons.sports_rounded;
+      case 'arts':
+        return Icons.palette_rounded;
+      case 'music':
+        return Icons.music_note_rounded;
+      case 'academic':
+        return Icons.school_rounded;
+      case 'cultural':
+        return Icons.diversity_3_rounded;
+      case 'environment':
+        return Icons.eco_rounded;
+      default:
+        return Icons.groups_rounded;
+    }
+  }
 
-                      return Row(
-                        children: [
-                          _buildStatCard("Members", memberCount.toString(),
-                              Icons.people, Colors.blue),
-                          _buildStatCard("Events", eventCount.toString(),
-                              Icons.event, Colors.orange),
-                          _buildStatCard(
-                              "Active Now", "High", Icons.bolt, Colors.purple),
-                        ],
-                      );
-                    },
-                  ),
+  Widget _heroPill(String label, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+          color: bgColor, borderRadius: BorderRadius.circular(20)),
+      child: Text(label,
+          style: TextStyle(
+              color: textColor, fontSize: 10, fontWeight: FontWeight.bold)),
+    );
+  }
 
-                  const SizedBox(height: 24),
-                  const Text("Management Tools",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-
-                  // Feature grid
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.3,
-                    children: [
-                      _buildToolCard(
-                        "Post Update",
-                        Icons.campaign,
-                        Colors.orange,
-                        () => _showPostUpdateSheet(context, clubDoc.id),
-                      ),
-                      _buildToolCard(
-                        "Manage Members",
-                        Icons.manage_accounts,
-                        Colors.teal,
-                        () {
-                          final String leaderId = data['leaderId'] ?? '';
-                          final bool isMeOwner = (leaderId == _currentUserId);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => Scaffold(
-                                backgroundColor: Colors.grey[50],
-                                appBar: AppBar(
-                                  title: const Text("Club Members",
-                                      style: TextStyle(color: Colors.black)),
-                                  backgroundColor: Colors.white,
-                                  elevation: 0.5,
-                                  iconTheme:
-                                      const IconThemeData(color: Colors.black),
-                                ),
-                                body: _buildMemberTab(
-                                    clubDoc, leaderId, isMeOwner),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildToolCard(
-                        "Event Planner",
-                        Icons.calendar_today,
-                        Colors.indigo,
-                        () => _showCreateEventSheet(context, clubDoc.id),
-                      ),
-                      _buildToolCard(
-                        "Club Chat",
-                        Icons.chat_bubble_outline,
-                        Colors.pink,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ClubChatScreen(club: clubDoc),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-                  const Text("Upcoming Events",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-
-                  // Event list
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('clubs')
-                        .doc(clubDoc.id)
-                        .collection('events')
-                        .orderBy('date', descending: false)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox();
-                      final events = snapshot.data!.docs;
-
-                      if (events.isEmpty) {
-                        return Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Center(
-                              child: Text("No events planned yet.")),
-                        );
-                      }
-
-                      return SizedBox(
-                        height: 160,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: events.length,
-                          itemBuilder: (context, index) {
-                            final DocumentSnapshot eventDoc = events[index];
-                            return _buildEventCard(
-                                eventDoc, clubDoc.id, data['leaderId']);
-                          },
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-                  const Text("Recent Updates",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-
-                  // Updates feed
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('clubs')
-                        .doc(clubDoc.id)
-                        .collection('updates')
-                        .orderBy('timestamp', descending: true)
-                        .limit(5)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox();
-                      final updates = snapshot.data!.docs;
-
-                      return Column(
-                        children: updates.map((doc) {
-                          final updateData = doc.data() as Map<String, dynamic>;
-                          final bool isWelcome = updateData['content']
-                              .toString()
-                              .contains("Welcome");
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              side: BorderSide(color: Colors.grey[200]!),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: isWelcome
-                                    ? Colors.blueAccent
-                                    : Colors.orangeAccent,
-                                child: Icon(
-                                  isWelcome ? Icons.person_add : Icons.campaign,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                              title: Text(
-                                updateData['content'] ?? "",
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500),
-                              ),
-                              subtitle: Text(
-                                "${updateData['authorName']} • ${_formatTimestamp(updateData['timestamp'])}",
-                                style: TextStyle(
-                                    fontSize: 11, color: Colors.grey[600]),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+  Widget _heroStat(String label, String value) {
+    return Column(
+      children: [
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(label,
+            style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8)),
+      ],
     );
   }
 
@@ -745,7 +868,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
               _buildBadge("OWNER", Colors.orange),
             ] else if (isMe) ...[
               const SizedBox(width: 8),
-              _buildBadge("YOU", AppTheme.primaryBlue), // Tag to make it obvious
+              _buildBadge(
+                  "YOU", AppTheme.primaryBlue), // Tag to make it obvious
             ],
           ],
         ),
@@ -765,8 +889,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
                     member['name'],
                     clubId,
                     clubName,
-                    ),
                   ),
+                ),
                 IconButton(
                   tooltip: "Remove Member",
                   icon: const Icon(Icons.person_remove_outlined,
@@ -781,8 +905,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
                 ),
               ],
             );
-          } 
-          
+          }
+
           // Case B: This is your own tile, and you aren't the owner -> Show Leave Button
           if (isMe && !isTargetOwner) {
             return TextButton.icon(
@@ -798,7 +922,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  Future<void> _leaveClub(String registrationId, String clubId, String clubName) async {
+  Future<void> _leaveClub(
+      String registrationId, String clubId, String clubName) async {
     final confirm = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -811,10 +936,12 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   child: const Text("Cancel")),
               TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text("Leave", style: TextStyle(color: Colors.red))),
+                  child:
+                      const Text("Leave", style: TextStyle(color: Colors.red))),
             ],
           ),
-        ) ?? false;
+        ) ??
+        false;
 
     if (!confirm) return;
 
@@ -831,19 +958,22 @@ class _ClubsScreenState extends State<ClubsScreen> {
       });
 
       // 3. Remove club ID out of the user's personal 'joinedClubs' tracking array
-      await FirebaseFirestore.instance.collection('users').doc(_currentUserId).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUserId)
+          .update({
         'joinedClubs': FieldValue.arrayRemove([clubId])
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("You left $clubName"), 
+            content: Text("You left $clubName"),
             backgroundColor: Colors.redAccent,
           ),
         );
-        
-        // ✅ FIXED: Pops past the current dialog and dashboard widgets, 
+
+        // ✅ FIXED: Pops past the current dialog and dashboard widgets,
         // stopping exactly when it hits the main interface shell (the very first route).
         Navigator.popUntil(context, (route) => route.isFirst);
       }
@@ -856,7 +986,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
       }
     }
   }
-  
+
   Widget _buildBadge(String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

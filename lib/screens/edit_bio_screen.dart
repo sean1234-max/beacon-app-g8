@@ -89,23 +89,6 @@ class _EditBioScreenState extends State<EditBioScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // const Stack(
-                    //   alignment: Alignment.bottomRight,
-                    //   children: [
-                    //     CircleAvatar(
-                    //       radius: 50,
-                    //       backgroundColor: Colors.grey,
-                    //       child:
-                    //           Icon(Icons.person, size: 50, color: Colors.white),
-                    //     ),
-                    //     CircleAvatar(
-                    //       radius: 18,
-                    //       backgroundColor: AppTheme.primaryBlue,
-                    //       child: Icon(Icons.camera_alt,
-                    //           size: 18, color: Colors.white),
-                    //     ),
-                    //   ],
-                    // ),
                     const SizedBox(height: 30),
                     TextFormField(
                       controller: _bioController,
