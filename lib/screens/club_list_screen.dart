@@ -175,7 +175,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
             return ClubCard(
               club: club,
-              // "Join Club" – goes to management if already a member, otherwise details
               onJoin: () async {
                 final membership = await FirebaseFirestore.instance
                     .collection('registrations')
@@ -194,22 +193,57 @@ class _ClubsScreenState extends State<ClubsScreen> {
                     ),
                   );
                 } else {
-                  Navigator.push(
+                  // 🔑 Catch the true flag if they successfully join from the details screen
+                  final joined = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
                       builder: (context) => ClubDetailsScreen(club: club),
                     ),
                   );
+
+                  // If they joined, instantly replace the details route space with the dashboard layout
+                  if (joined == true && mounted) {
+                    final freshClubDoc = await FirebaseFirestore.instance
+                        .collection('clubs')
+                        .doc(club.id)
+                        .get();
+
+                    if (!mounted) return;
+
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => _buildClubManagementInterface(freshClubDoc),
+                      ),
+                    );
+                  }
                 }
               },
               // "Details" – always opens the details screen
-              onDetails: () {
-                Navigator.push(
+              onDetails: () async {
+                // 🔑 Added the same result listener here in case they hit "Join" from inside the Details interface view
+                final joined = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
                     builder: (context) => ClubDetailsScreen(club: club),
                   ),
                 );
+
+                if (joined == true && mounted) {
+                  final freshClubDoc = await FirebaseFirestore.instance
+                      .collection('clubs')
+                      .doc(club.id)
+                      .get();
+
+                  if (!mounted) return;
+
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => _buildClubManagementInterface(freshClubDoc),
+                    ),
+                  );
+                }
               },
             );
           },
