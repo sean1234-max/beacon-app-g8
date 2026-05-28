@@ -8,7 +8,7 @@ import 'package:assignment/services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Ensure your web config is set up as discussed
+  await Firebase.initializeApp(); 
   runApp(const BeaconApp());
 }
 
@@ -20,7 +20,7 @@ class BeaconApp extends StatelessWidget {
     return MaterialApp(
       title: 'Beacon',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme, // Using the theme from Step 1
+      theme: AppTheme.lightTheme, 
       home: const AuthWrapper(),
     );
   }
@@ -72,8 +72,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
-
     // --- 2. Validation to assign role ---
     if (!email.endsWith('@mail.apu.edu.my')) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -83,6 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     setState(() => _isLoading = true);
+
     // --- 3. Call AuthService with the role ---
     final user = await AuthService().register(
       email,
@@ -113,7 +112,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Uniform clean background
+      backgroundColor: Colors.white, 
       appBar: AppBar(
         title: const Text(
           "Create Account",
@@ -130,6 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // 🟢 Fixed Git Conflict lines here
               Text(
                 "Join Beacon Today",
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -144,12 +144,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Full Name Input
+              // Username/Full Name Input
               TextField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
-                  labelText: "Full Name",
+                  labelText: "Username",
                   prefixIcon: const Icon(Icons.person_outline),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -196,8 +196,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
+              const SizedBox(height: 20),
 
               // Password Input
               TextField(

@@ -2,13 +2,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/cupertino.dart';
+import 'dart:math';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // 🟢 Guard flag to prevent the "init() has already been called" error loop
   bool _isGoogleInitialized = false;
+
+  String _generateRandomStudentId() {
+    final random = Random();
+    int randomNumber = 10000 + random.nextInt(90000); 
+    return 'TP0$randomNumber';
+  }
 
   // Sign In with Email and Password
   Future<User?> signIn(String email, String password) async {
@@ -39,22 +45,22 @@ class AuthService {
       );
 
       if (result.user != null) {
-        // Automatically isolate the TP number from your APU email domain if possible
-        String autoStudentId = 'TPXXXXXX';
+        String studentId = _generateRandomStudentId();
         final emailPrefix = email.split('@')[0];
-        if (emailPrefix.toLowerCase().startsWith('tp')) {
-          autoStudentId = emailPrefix.toUpperCase();
+        
+        final tpRegex = RegExp(r'^tp\d+$', caseSensitive: false);
+        if (tpRegex.hasMatch(emailPrefix)) {
+          studentId = emailPrefix.toUpperCase();
         }
 
-        // Save customized data directly to your collection document path
         await _db.collection('users').doc(result.user!.uid).set({
           'uid': result.user!.uid,
           'email': email,
-          'username': name,      // Saves the username parameter gathered from the text input field
+          'username': name,     
           'phone': phone,        
           'role': role,          
           'displayName': name,   
-          'studentId': autoStudentId,
+          'studentId': studentId,
           'isPrivate': false,
           'bio': 'New APU Student',
           'createdAt': FieldValue.serverTimestamp(),

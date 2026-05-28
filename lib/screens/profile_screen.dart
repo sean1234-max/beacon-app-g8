@@ -7,6 +7,10 @@ import 'add_event_screen.dart';
 import 'my_tickets_screen.dart';
 import 'scan_qr_screen.dart';
 import 'login_screen.dart';
+import 'edit_bio_screen.dart';
+import 'privacy_security_screen.dart';
+import 'event_history_screen.dart';
+import 'club_management_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -115,6 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         String email = 'Loading...';
         String studentId = 'Loading...';
         String photoUrl = '';
+        String bio = '';
 
         if (snapshot.hasData && snapshot.data!.data() != null) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -122,6 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           email = data['email'] ?? 'No Email';
           studentId = data['studentId'] ?? 'No TP';
           photoUrl = data['photoUrl'] ?? '';
+          bio = data['bio'] ?? '';
         }
 
         return Container(
@@ -159,6 +165,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     color: Colors.white54, fontSize: 12)),
                           ],
                         ),
+                        const SizedBox(height: 6),
+                        if (bio.isNotEmpty)
+                          Row(children: [
+                            const Icon(Icons.edit_note,
+                                color: Colors.white54, size: 13),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(bio,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.white54, fontSize: 12)),
+                            ),
+                          ]),
                         const SizedBox(height: 10),
                       ],
                     ),
@@ -378,28 +398,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final items = [
       {
         'icon': Icons.edit_outlined,
-        'title': 'Edit Profile',
-        'sub': 'Update your personal details'
+        'title': 'Edit Bio',
+        'sub': 'Update your personal details',
+        'onTap': () {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const EditBioScreen()));
+        }
       },
       {
-        'icon': Icons.notifications_outlined,
-        'title': 'Notifications',
-        'sub': 'Manage alert preferences'
+        'icon': Icons.history_rounded,
+        'title': 'Event History',
+        'sub': 'View your past events',
+        'onTap': () {}
       },
       {
         'icon': Icons.shield_outlined,
         'title': 'Privacy & Security',
-        'sub': 'Password, 2FA, data'
+        'sub': 'Password, 2FA, data',
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PrivacySecurityScreen()),
+          );
+        }
       },
       {
         'icon': Icons.people_outline,
         'title': 'Club Management',
-        'sub': 'Roles & memberships'
+        'sub': 'Roles & memberships',
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ClubManagementScreen()),
+          );
+        },
       },
       {
         'icon': Icons.help_outline_rounded,
         'title': 'Help & Support',
-        'sub': 'FAQs and contact'
+        'sub': 'FAQs and contact',
+        'onTap': () {},
       },
     ];
 
@@ -435,7 +473,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: const TextStyle(color: Colors.grey, fontSize: 12)),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded,
                       size: 14, color: Colors.grey),
-                  onTap: () {},
+                  onTap: item['onTap'] as VoidCallback,
                 ),
                 if (i < items.length - 1) const Divider(height: 1, indent: 60),
               ],
@@ -462,12 +500,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 try {
                   // 1. Sign out from Firebase Auth
                   await FirebaseAuth.instance.signOut();
-                  
+
                   // 2. Clear the screen stack and instantly jump to Login Screen
                   if (context.mounted) {
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false, 
+                      (route) => false,
                     );
                   }
                 } catch (e) {
