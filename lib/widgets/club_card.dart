@@ -152,7 +152,7 @@ class ClubCard extends StatelessWidget {
                           ],
                         ),
                         Text(
-                          '${liveCount}/${club.maxMembers} members',
+                          '$liveCount/${club.maxMembers} members',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],

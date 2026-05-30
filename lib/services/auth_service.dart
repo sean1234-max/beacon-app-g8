@@ -12,7 +12,7 @@ class AuthService {
 
   String _generateRandomStudentId() {
     final random = Random();
-    int randomNumber = 10000 + random.nextInt(90000); 
+    int randomNumber = 10000 + random.nextInt(90000);
     return 'TP0$randomNumber';
   }
 
@@ -32,10 +32,10 @@ class AuthService {
 
   // Register with Email, Password, and Role
   Future<User?> register(
-    String email, 
+    String email,
     String password, {
-    String role = 'student', 
-    required String name, 
+    String role = 'student',
+    required String name,
     required String phone,
   }) async {
     try {
@@ -47,7 +47,7 @@ class AuthService {
       if (result.user != null) {
         String studentId = _generateRandomStudentId();
         final emailPrefix = email.split('@')[0];
-        
+
         final tpRegex = RegExp(r'^tp\d+$', caseSensitive: false);
         if (tpRegex.hasMatch(emailPrefix)) {
           studentId = emailPrefix.toUpperCase();
@@ -56,10 +56,10 @@ class AuthService {
         await _db.collection('users').doc(result.user!.uid).set({
           'uid': result.user!.uid,
           'email': email,
-          'username': name,     
-          'phone': phone,        
-          'role': role,          
-          'displayName': name,   
+          'username': name,
+          'phone': phone,
+          'role': role,
+          'displayName': name,
           'studentId': studentId,
           'isPrivate': false,
           'bio': 'New APU Student',
@@ -81,19 +81,22 @@ class AuthService {
       if (!_isGoogleInitialized) {
         await GoogleSignIn.instance.initialize(
           // 🟢 Injected Client Type 3 ID from your google-services.json
-          clientId: '851476540070-c4a8bao7qspb2lmrjcl1a98ltvaq850d.apps.googleusercontent.com',
+          clientId:
+              '851476540070-c4a8bao7qspb2lmrjcl1a98ltvaq850d.apps.googleusercontent.com',
         );
         _isGoogleInitialized = true;
       }
 
       // 2. Check if the active platform natively supports the overlay workflow
       if (!GoogleSignIn.instance.supportsAuthenticate()) {
-        debugPrint("Platform doesn't support immediate direct authentication workflows.");
+        debugPrint(
+            "Platform doesn't support immediate direct authentication workflows.");
         return null;
       }
 
       // 3. STEP 1: Authentication (Identity Verification)
-      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
+      final GoogleSignInAccount googleUser =
+          await GoogleSignIn.instance.authenticate();
 
       if (googleUser == null) {
         return null; // User backed out of the account selection panel
@@ -101,13 +104,15 @@ class AuthService {
 
       // 4. STEP 2: Authorization (Explicitly requesting scopes for the Access Token)
       final List<String> scopes = ['email'];
-      final GoogleSignInClientAuthorization authorizedUser = 
+      final GoogleSignInClientAuthorization authorizedUser =
           await googleUser.authorizationClient.authorizeScopes(scopes);
 
       // 5. Construct structural credentials for the Firebase handshake
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: authorizedUser.accessToken,         // Obtained securely from Authorization
-        idToken: googleUser.authentication.idToken,      // Obtained securely from Identity
+        accessToken:
+            authorizedUser.accessToken, // Obtained securely from Authorization
+        idToken: googleUser
+            .authentication.idToken, // Obtained securely from Identity
       );
 
       // 6. Complete authentication inside Firebase Auth
@@ -118,7 +123,8 @@ class AuthService {
       if (user != null) {
         await _db.collection('users').doc(user.uid).set({
           'email': user.email,
-          'displayName': user.displayName ?? user.email?.split('@')[0] ?? 'APU Student',
+          'displayName':
+              user.displayName ?? user.email?.split('@')[0] ?? 'APU Student',
           'profilePic': user.photoURL ?? '',
           'lastLogin': FieldValue.serverTimestamp(),
           'studentId': 'TPXXXXXX',

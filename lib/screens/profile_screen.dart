@@ -11,9 +11,9 @@ import 'scan_qr_screen.dart';
 import 'login_screen.dart';
 import 'edit_bio_screen.dart';
 import 'privacy_security_screen.dart';
-import 'event_history_screen.dart';
 import 'club_management_screen.dart';
 import 'club_list_screen.dart';
+import 'event_history_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -447,7 +447,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'icon': Icons.history_rounded,
         'title': 'Event History',
         'sub': 'View your past events',
-        'onTap': () {}
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const EventHistoryScreen()),
+          );
+        }
       },
       {
         'icon': Icons.shield_outlined,

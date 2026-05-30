@@ -8,7 +8,6 @@ import 'package:assignment/screens/club_list_screen.dart';
 import 'package:assignment/screens/add_event_screen.dart';
 import 'package:assignment/screens/event_details_screen.dart';
 import 'package:assignment/services/database_service.dart';
-import 'package:assignment/services/auth_service.dart';
 import 'package:assignment/models/event_model.dart';
 import 'package:assignment/widgets/event_card.dart';
 import 'package:assignment/theme/app_theme.dart';
@@ -215,24 +214,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               onTap: () => setState(() => _selectedIndex = 0),
             ),
             const Spacer(),
-ListTile(
-  leading: const Icon(Icons.logout, color: Colors.red),
-  title: const Text("Logout"),
-  onTap: () async {
-    try {
-      await FirebaseAuth.instance.signOut();
-  
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      debugPrint("Logout runtime processing error: ${e.toString()}");
-    }
-  },
-),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text("Logout"),
+              onTap: () async {
+                try {
+                  await FirebaseAuth.instance.signOut();
+
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                          builder: (context) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  debugPrint(
+                      "Logout runtime processing error: ${e.toString()}");
+                }
+              },
+            ),
           ],
         ),
       ),

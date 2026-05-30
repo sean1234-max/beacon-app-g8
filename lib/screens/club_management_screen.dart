@@ -906,7 +906,9 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                     child: ElevatedButton(
                       onPressed: () async {
                         if (titleCtrl.text.trim().isEmpty ||
-                            msgCtrl.text.trim().isEmpty) return;
+                            msgCtrl.text.trim().isEmpty) {
+                          return;
+                        }
                         try {
                           final mSnap = await FirebaseFirestore.instance
                               .collection('registrations')
