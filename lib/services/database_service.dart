@@ -40,6 +40,30 @@ class DatabaseService {
             snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList());
   }
 
+  // GET UPCOMING EVENTS CRREATED BY A SPECIFIC USER
+  Stream<List<Event>> getUpcomingEvetnsByCreator(String creatorId) {
+    return _db
+        .collection('events')
+        .where('creatorId', isEqualTo: creatorId)
+        .where('dateTime', isGreaterThan: Timestamp.now())
+        .orderBy('dateTime')
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList());
+  }
+
+  //GET ALL CHECKED-IN PARTICIPANTS FOR AN EVENT
+  Stream<List<Map<String, dynamic>>> getCheckedInParticipants(String eventId) {
+    return _db
+        .collection('event_registrations')
+        .where('eventId', isEqualTo: eventId)
+        .where('isCheckedIn', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => {'ticketId': doc.id, ...doc.data()})
+            .toList());
+  }
+
   // JOIN EVENT LOGIC — returns the created ticket's Firestore document ID
   Future<String> joinEvent(String eventId, String userId,
       {String eventTitle = ''}) async {

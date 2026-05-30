@@ -844,10 +844,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
   //  5. FOOTER
-  // ═══════════════════════════════════════════════════════════════
-
   Widget _buildFooter(Map<String, dynamic> club) {
     final Timestamp? createdAt = club['createdAt'] as Timestamp?;
     final String founded = createdAt != null
@@ -864,9 +861,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
   //  BOTTOM SHEETS
-  // ═══════════════════════════════════════════════════════════════
   // ── Announcement ─────────────────────────────────────────────
 
   void _showAnnouncementSheet(String clubId, Map<String, dynamic> club) {
@@ -1526,10 +1521,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
   //  FIRESTORE ACTIONS
-  // ═══════════════════════════════════════════════════════════════
-
   Future<void> _removeMember(String userId, String name, String clubId) async {
     try {
       final query = await FirebaseFirestore.instance

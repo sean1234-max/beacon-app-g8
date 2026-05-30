@@ -98,10 +98,6 @@ class AuthService {
       final GoogleSignInAccount googleUser =
           await GoogleSignIn.instance.authenticate();
 
-      if (googleUser == null) {
-        return null; // User backed out of the account selection panel
-      }
-
       // 4. STEP 2: Authorization (Explicitly requesting scopes for the Access Token)
       final List<String> scopes = ['email'];
       final GoogleSignInClientAuthorization authorizedUser =

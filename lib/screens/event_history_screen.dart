@@ -144,7 +144,7 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
               letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             '$attended event${attended == 1 ? '' : 's'} attended',
             style: const TextStyle(
@@ -153,65 +153,11 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 18),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                children: [
-                  _buildStatCell('ATTENDED', '$attended'),
-                  _buildStatDivider(),
-                  _buildStatCell('PAID', '$paid'),
-                  _buildStatDivider(),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatCell(String label, String value) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white38,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatDivider() {
-    return Container(
-      width: 1,
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      color: Colors.white12,
-    );
-  }
   // ─── FILTER CHIPS ────────────────────────────────────────────────────────────
 
   Widget _buildFilterChips() {
@@ -296,7 +242,7 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
             borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x0A000000),
+                color: Color.fromARGB(8, 255, 0, 0),
                 blurRadius: 2,
                 offset: Offset(0, 1),
               ),
@@ -319,7 +265,7 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       decoration: const BoxDecoration(
-                        color: _navy,
+                        color: AppTheme.secondaryRed,
                         borderRadius:
                             BorderRadius.vertical(top: Radius.circular(9)),
                       ),

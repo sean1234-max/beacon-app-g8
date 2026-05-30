@@ -1,16 +1,15 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:convert';
+import 'package:assignment/screens/event_selection_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'add_event_screen.dart';
 import 'my_tickets_screen.dart';
-import 'scan_qr_screen.dart';
 import 'login_screen.dart';
 import 'edit_bio_screen.dart';
-import 'privacy_security_screen.dart';
 import 'club_management_screen.dart';
 import 'club_list_screen.dart';
 import 'event_history_screen.dart';
@@ -336,8 +335,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       {
         'icon': Icons.qr_code_scanner_rounded,
         'label': 'Scan QR',
-        'onTap': () => Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const ScanQrScreen())),
+        'onTap': () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const EventSelectionScreen())),
       },
       {
         'icon': Icons.confirmation_num_outlined,
@@ -354,9 +353,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       {
         'icon': Icons.edit_outlined,
         'label': 'Manage Events',
-        'onTap': () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('this function coming soon')),
-            ),
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ClubManagementScreen()),
+          );
+        },
       },
     ];
 
@@ -455,17 +457,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       },
       {
-        'icon': Icons.shield_outlined,
-        'title': 'Privacy & Security',
-        'sub': 'Password, 2FA, data',
-        'onTap': () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const PrivacySecurityScreen()),
-          );
-        }
-      },
-      {
         'icon': Icons.people_outline,
         'title': 'Club Management',
         'sub': 'Roles & memberships',
@@ -475,12 +466,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             MaterialPageRoute(builder: (_) => const ClubManagementScreen()),
           );
         },
-      },
-      {
-        'icon': Icons.help_outline_rounded,
-        'title': 'Help & Support',
-        'sub': 'FAQs and contact',
-        'onTap': () {},
       },
     ];
 

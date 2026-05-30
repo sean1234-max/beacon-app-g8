@@ -1266,10 +1266,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           .where('status', isEqualTo: 'pending')
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError)
+        if (snapshot.hasError) {
           return const Center(child: Text("Error loading requests"));
-        if (!snapshot.hasData)
+        }
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
+        }
 
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
@@ -1654,10 +1656,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('users').snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.hasError)
+              if (snapshot.hasError) {
                 return const Center(child: Text("Error loading users"));
-              if (!snapshot.hasData)
+              }
+              if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
+              }
 
               // 1. Convert the query to lowercase ONCE for efficiency
               final String query = _userSearchQuery.trim().toLowerCase();
@@ -1671,8 +1675,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                   // 2. Query Preparation
                   final String query = _userSearchQuery.trim().toLowerCase();
-                  if (query.isEmpty)
+                  if (query.isEmpty) {
                     return true; // Show everyone if search is empty
+                  }
 
                   // 3. Field Extraction with Fallbacks
                   final String name =
@@ -1888,8 +1893,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               stream:
                   FirebaseFirestore.instance.collection('events').snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
 
                 // 1. Get raw documents from Firebase
                 final allEvents = snapshot.data!.docs;

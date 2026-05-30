@@ -1,3 +1,5 @@
+import 'package:assignment/models/event_model.dart';
+import 'package:assignment/screens/checked_in_participants_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/database_service.dart';
@@ -15,7 +17,8 @@ import '../theme/app_theme.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ScanQrScreen extends StatefulWidget {
-  const ScanQrScreen({super.key});
+  final Event event;
+  const ScanQrScreen({super.key, required this.event});
 
   @override
   State<ScanQrScreen> createState() => _ScanQrScreenState();
@@ -177,10 +180,21 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Scan QR Code'),
+        title: Text('Scan: ${widget.event.title}'),
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.group_rounded),
+            tooltip: 'View Checked-in Participants',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    CheckedInParticipantsScreen(event: widget.event),
+              ),
+            ),
+          ),
           // Torch toggle button
           IconButton(
             tooltip: 'Toggle flashlight',
