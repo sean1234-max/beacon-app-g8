@@ -72,6 +72,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    if (password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Password must be at least 8 characters long."),
+          backgroundColor: Colors.redAccent, 
+        ),
+      );
+      return;
+    }
+
     // --- 2. Validation to assign role ---
     if (!email.endsWith('@mail.apu.edu.my')) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -129,7 +139,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 🟢 Fixed Git Conflict lines here
               Text(
                 "Join Beacon Today",
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -212,6 +221,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onSubmitted: (_) => _register(),
                 decoration: InputDecoration(
                   labelText: "Password",
+                  helperText: "Must be at least 8 characters long",
+                  helperStyle: TextStyle(color: Colors.grey[500]),
                   prefixIcon: const Icon(Icons.lock_outline),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
