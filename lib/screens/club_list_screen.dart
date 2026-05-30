@@ -932,7 +932,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
             );
           }
 
-          // Case B: This is your own tile, and you aren't the owner -> Show Leave Button
           if (isMe && !isTargetOwner) {
             return TextButton.icon(
               label: const Text("Leave", style: TextStyle(color: Colors.red)),

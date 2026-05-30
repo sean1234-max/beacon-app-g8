@@ -41,7 +41,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: "Logout",
-            onPressed: () => FirebaseAuth.instance.signOut(),
+            onPressed: () async {
+              // 1. Sign out from Firebase first to revoke active session tokens
+              await FirebaseAuth.instance.signOut();
+              
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                }
+              });
+            },
           ),
           const SizedBox(width: 12),
         ],
