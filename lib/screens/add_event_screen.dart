@@ -581,7 +581,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _selectedBank,
+            initialValue: _selectedBank,
             decoration: InputDecoration(
               labelText: 'Bank Name',
               prefixIcon: const Icon(Icons.account_balance_outlined, size: 20),

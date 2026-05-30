@@ -213,7 +213,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => _buildClubManagementInterface(freshClubDoc),
+                        builder: (context) =>
+                            _buildClubManagementInterface(freshClubDoc),
                       ),
                     );
                   }
@@ -240,7 +241,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => _buildClubManagementInterface(freshClubDoc),
+                      builder: (context) =>
+                          _buildClubManagementInterface(freshClubDoc),
                     ),
                   );
                 }
@@ -1437,7 +1439,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
             ),
             const SizedBox(height: 15),
             DropdownButtonFormField<String>(
-              value: selectedCategory,
+              initialValue: selectedCategory,
               items: ['Sports', 'Academic', 'Arts', 'Tech']
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                   .toList(),
