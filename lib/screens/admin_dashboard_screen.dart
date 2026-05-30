@@ -338,23 +338,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Section
+          // 1. Header Section
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "System Insights",
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1),
-                  ),
-                  Text(
-                    "Monitor Beacon performance and user activity",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-                  ),
-                ],
+              // 💡 Wrapped in Expanded to prevent the horizontal overflow crash
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "System Insights",
+                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1),
+                      overflow: TextOverflow.ellipsis, // Adds '...' if the screen is extremely narrow
+                    ),
+                    Text(
+                      "Monitor Beacon performance and user activity",
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                      overflow: TextOverflow.ellipsis, // Safety guard for subtitle string length
+                    ),
+                  ],
+                ),
               ),
+              
+              // Give a small padding gap so the text never hugs the capsule tightly
+              const SizedBox(width: 16),
+              
+              // Right Side: Last Updated Capsule Box
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
@@ -363,6 +373,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min, // Restricts inner row layout tightly to elements
                   children: [
                     const Icon(Icons.refresh, size: 16, color: Colors.grey),
                     const SizedBox(width: 8),
@@ -375,9 +386,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          
+          // 2. Incident & Alert Ribbon Banner
+          _buildSystemAlertBanner(), 
           const SizedBox(height: 40),
 
-          // Statistics Grid
+          // 3. Statistics Grid (Realtime Counter Cards via StreamBuilder)
           StreamBuilder(
             stream: FirebaseFirestore.instance.collection('clubs').snapshots(),
             builder: (context, clubSnapshot) {
@@ -394,7 +409,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                   return LayoutBuilder(
                     builder: (context, constraints) {
-                      // Adjust column count based on screen width
                       int crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 800 ? 2 : 1);
                       return GridView.count(
                         shrinkWrap: true,
@@ -416,10 +430,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               );
             },
           ),
+          const SizedBox(height: 40),
 
-          const SizedBox(height: 50),
-
-          // Quick Actions with improved container
+          // 4. Quick Actions / Administrative Tools
           const Text("Administrative Tools", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           Container(
@@ -429,10 +442,533 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: _buildQuickActionRow(),
+            child: _buildQuickActionRow(), // Your horizontal button action row
+          ),
+          const SizedBox(height: 40),
+
+          // 5. Advanced Data Graphs & Performance Splitting Section
+          const Text("System Performance & Distribution", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text("Deep-dive historical operational metrics for campus activity planning.", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 1000) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildTrafficAnalysisCard()),
+                    const SizedBox(width: 24),
+                    Expanded(child: _buildSystemAuditSummaryCard()),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildTrafficAnalysisCard(),
+                    const SizedBox(height: 24),
+                    _buildSystemAuditSummaryCard(),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 24),
+          
+          // 6. Bottom High-Density Footers (Live Audit Feed + Server Health Panel)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 1000) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 2, child: _buildRecentActivityFeed()), 
+                    const SizedBox(width: 24),
+                    Expanded(flex: 1, child: _buildServerHealthPanel()),  
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildRecentActivityFeed(),
+                    const SizedBox(height: 24),
+                    _buildServerHealthPanel(),
+                  ],
+                );
+              }
+            },
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildServerHealthPanel() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Cloud Service Infrastructure", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          _buildStatusRow("Cloud Firestore Node", "Operational", Colors.green),
+          const SizedBox(height: 12),
+          _buildStatusRow("Firebase Storage Cluster", "9.2 GB / 50 GB Used", Colors.orange),
+          const SizedBox(height: 12),
+          _buildStatusRow("FCM Push Gateway", "Connected", Colors.green),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSystemAlertBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 28),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Pending Content Reports",
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade900, fontSize: 15),
+                ),
+                Text(
+                  "3 student events have been flagged by community filters today. Please review them in the Approvals tab.",
+                  style: TextStyle(color: Colors.amber.shade800, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _selectedIndex = 1; // Jumps directly to the Approvals Tab
+              });
+            },
+            child: Text("Review Now", style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentActivityFeed() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Live Audit Feed", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              TextButton(
+                onPressed: () => setState(() => _selectedIndex = 3), // Point to your System Logs index
+                child: const Text("View Full Trail →", style: TextStyle(fontSize: 13)),
+              )
+            ],
+          ),
+          const Divider(),
+          
+          // --- LIVE FIREBASE STREAM ---
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('system_logs')
+                .orderBy('timestamp', descending: true)
+                .limit(3) // Keeps layout neat by matching your original UI scale
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text("Error fetching logs: ${snapshot.error}", style: const TextStyle(color: Colors.red)),
+                );
+              }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text("No operational logs recorded yet.", style: TextStyle(color: Colors.grey)),
+                );
+              }
+
+              final logs = snapshot.data!.docs;
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: logs.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final logData = logs[index].data() as Map<String, dynamic>;
+                  
+                  // Parse fields from your Firestore snapshot schema
+                  final String action = logData['action'] ?? 'Unknown Action';
+                  final String email = logData['adminEmail'] ?? 'System';
+                  final String target = logData['targetId'] ?? '';
+                  final Timestamp? timeStamp = logData['timestamp'] as Timestamp?;
+                  
+                  // Format relative or localized clock string snippet
+                  String timeDisplay = "Just now";
+                  if (timeStamp != null) {
+                    final date = timeStamp.toDate();
+                    timeDisplay = "${date.hour}:${date.minute.toString().padLeft(2, '0')}";
+                  }
+
+                  // Dynamically pick look-and-feel treatments depending on the logged string value
+                  IconData icon = Icons.info_outline;
+                  Color color = AppTheme.primaryBlue;
+
+                  if (action.contains("Banned") || action.contains("Reject")) {
+                    icon = Icons.block;
+                    color = Colors.red;
+                  } else if (action.contains("Broadcast") || action.contains("Alert")) {
+                    icon = Icons.campaign;
+                    color = AppTheme.primaryBlue;
+                  } else if (action.contains("Approve") || action.contains("Club")) {
+                    icon = Icons.verified;
+                    color = Colors.teal;
+                  }
+
+                  return ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: color.withOpacity(0.1),
+                      radius: 18,
+                      child: Icon(icon, color: color, size: 18),
+                    ),
+                    title: Text(action, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("$email • Target: $target", maxLines: 1, overflow: TextOverflow.ellipsis),
+                    trailing: Text(timeDisplay, style: TextStyle(color: Colors.grey[400], fontSize: 11)),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusRow(String service, String status, Color statusColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(service, style: TextStyle(color: Colors.grey[700], fontSize: 13, fontWeight: FontWeight.w500)),
+        Row(
+          children: [
+            Container(width: 8, height: 8, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          ],
+        )
+      ],
+    );
+  }
+  
+  Widget _buildTrafficAnalysisCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Student Peak Activity", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(6)),
+                child: const Text("Live Weekly View", style: TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text("Total administrative & system interactions recorded per day.", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+          const SizedBox(height: 24),
+          
+          // --- LIVE TRAFFIC CALCULATOR STREAM ---
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('system_logs').snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox(height: 140, child: Center(child: CircularProgressIndicator()));
+              }
+
+              final logs = snapshot.data!.docs;
+              
+              // Array buckets for weekdays: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+              List<int> weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
+
+              for (var doc in logs) {
+                final data = doc.data() as Map<String, dynamic>;
+                if (data['timestamp'] != null) {
+                  final DateTime logDate = (data['timestamp'] as Timestamp).toDate();
+                  int dayIndex = logDate.weekday - 1; 
+                  if (dayIndex >= 0 && dayIndex < 7) {
+                    weekdayCounts[dayIndex]++;
+                  }
+                }
+              }
+
+              // Find the highest volume day to set our scale ceiling (Prevent division by zero)
+              int maxActivity = weekdayCounts.reduce((curr, next) => curr > next ? curr : next);
+              
+              return SizedBox(
+                height: 140, // Strict bounded frame for the graph area
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.end, // Keeps all bar bases grounded on the same baseline
+                  children: [
+                    _buildDynamicBar("Mon", weekdayCounts[0], maxActivity, weekdayCounts[0] == maxActivity && weekdayCounts[0] > 0),
+                    _buildDynamicBar("Tue", weekdayCounts[1], maxActivity, weekdayCounts[1] == maxActivity && weekdayCounts[1] > 0),
+                    _buildDynamicBar("Wed", weekdayCounts[2], maxActivity, weekdayCounts[2] == maxActivity && weekdayCounts[2] > 0),
+                    _buildDynamicBar("Thu", weekdayCounts[3], maxActivity, weekdayCounts[3] == maxActivity && weekdayCounts[3] > 0),
+                    _buildDynamicBar("Fri", weekdayCounts[4], maxActivity, weekdayCounts[4] == maxActivity && weekdayCounts[4] > 0),
+                    _buildDynamicBar("Sat", weekdayCounts[5], maxActivity, weekdayCounts[5] == maxActivity && weekdayCounts[5] > 0),
+                    _buildDynamicBar("Sun", weekdayCounts[6], maxActivity, weekdayCounts[6] == maxActivity && weekdayCounts[6] > 0),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDynamicBar(String label, int totalRawCount, int maxActivity, bool isPeak) {
+    // 1. Define the exact maximum height the bar container can reach in pixels
+    const double maxChartHeightAllowed = 85.0; 
+    const double minimumBaselineHeight = 6.0;
+
+    // 2. Compute proportional ratio directly (clean math logic)
+    double calculatedBarHeight = minimumBaselineHeight;
+    if (maxActivity > 0 && totalRawCount > 0) {
+      calculatedBarHeight = (totalRawCount / maxActivity) * maxChartHeightAllowed;
+    }
+
+    // 3. Keep it within strict safety bounds
+    if (calculatedBarHeight < minimumBaselineHeight) {
+      calculatedBarHeight = minimumBaselineHeight;
+    } else if (calculatedBarHeight > maxChartHeightAllowed) {
+      calculatedBarHeight = maxChartHeightAllowed;
+    }
+
+    return Tooltip(
+      message: "$totalRawCount Actions Logged",
+      child: SizedBox(
+        width: 32, // Guarantees structural room for text elements to avoid clipping
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 1. Raw Count Label
+            Text(
+              totalRawCount.toString(),
+              style: TextStyle(
+                fontSize: 11, 
+                fontWeight: FontWeight.w600, 
+                color: isPeak ? const Color(0xFF0D47A1) : Colors.grey[600], // Replaced AppTheme placeholder with a safe fallback blue color if needed
+              ),
+            ),
+            const SizedBox(height: 6),
+            
+            // 2. Proportional Bar
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutCubic,
+              width: 24,
+              height: calculatedBarHeight, // Exact, calculated raw safe pixel height
+              decoration: BoxDecoration(
+                color: isPeak ? const Color(0xFF0D47A1) : Colors.grey[200],
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            
+            const SizedBox(height: 8),
+            // 3. Day Label
+            Text(
+              label, 
+              style: TextStyle(
+                fontSize: 11, 
+                color: isPeak ? const Color(0xFF0D47A1) : Colors.grey[600], 
+                fontWeight: isPeak ? FontWeight.bold : FontWeight.normal
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSystemAuditSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Administrative Action Distribution", 
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Real-time ratio analysis of logged administrative tasks.", 
+            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('system_logs').snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox(
+                  height: 120, 
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final allLogs = snapshot.data!.docs;
+              final int totalCount = allLogs.length;
+
+              if (totalCount == 0) {
+                return const Text(
+                  "No logged actions found to compute distribution.", 
+                  style: TextStyle(color: Colors.grey),
+                );
+              }
+
+              // 1. DYNAMIC AGGREGATION MAP
+              // Key: Action Name (String), Value: Occurrence Count (Int)
+              Map<String, int> actionDistribution = {};
+
+              for (var doc in allLogs) {
+                final data = doc.data() as Map<String, dynamic>;
+                // Read raw string, fallback to 'Unclassified' if missing
+                String actionName = (data['action'] ?? 'Unclassified').toString().trim();
+                
+                // Increment frequency map dynamically
+                actionDistribution[actionName] = (actionDistribution[actionName] ?? 0) + 1;
+              }
+
+              // 2. Sort the map so highest volume actions appear first
+              var sortedActions = actionDistribution.entries.toList()
+                ..sort((a, b) => b.value.compareTo(a.value));
+
+              // 3. Dynamic Color Pool to loop through for unique actions
+              final List<Color> UIColorsPool = [
+                const Color(0xFF0D47A1), // Blue
+                Colors.teal,
+                Colors.red.shade600,
+                Colors.orange,
+                Colors.purple,
+                Colors.amber,
+              ];
+
+              return Column(
+                children: [
+                  // Dynamically build rows based on actual database entries
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: sortedActions.length,
+                    itemBuilder: (context, index) {
+                      final entry = sortedActions[index];
+                      double percentageFactor = entry.value / totalCount;
+                      Color displayColor = UIColorsPool[index % UIColorsPool.length];
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: _buildMetricDistributionRow(
+                          entry.key, // Dynamic name from DB (e.g., "Sent Broadcast Alert")
+                          "${(percentageFactor * 100).toStringAsFixed(0)}%", // Dynamic calculation
+                          displayColor,
+                          percentageFactor,
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  Divider(color: Colors.grey[100]),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Total Calculated Volume", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      Text("$totalCount log actions", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    ],
+                  )
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+  // Sub-helper for the distribution rows
+  Widget _buildMetricDistributionRow(String title, String trailingValue, Color color, double percentage) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black87)),
+            Text(trailingValue, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: percentage,
+            backgroundColor: Colors.grey[100],
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 6,
+          ),
+        ),
+      ],
     );
   }
 
