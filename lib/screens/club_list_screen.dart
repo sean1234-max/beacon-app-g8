@@ -470,6 +470,13 @@ class _ClubsScreenState extends State<ClubsScreen> {
               builder: (context, eventSnapshot) {
                 final int eventCount = eventSnapshot.data?.docs.length ?? 0;
 
+                // 🚀 Step 1: Safely extract the club leader's user ID from the document data
+                final Map<String, dynamic>? clubData = clubDoc.data() as Map<String, dynamic>?;
+                final String clubLeaderId = clubData?['leaderId'] ?? '';
+
+                // 🚀 Step 2: Compare with the logged-in user ID to see if they own THIS specific club
+                final bool isClubOwner = _currentUserId == clubLeaderId;
+
                 return ListView(
                   children: [
                     // ── Hero Card ──────────────────────────────────────
@@ -488,7 +495,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (_userRole != 'club_leader') ...[
+                            // 🚀 Step 3: Show the return button if the user is NOT the owner of this specific club
+                            if (!isClubOwner) ...[
                               GestureDetector(
                                 onTap: () => Navigator.pop(context),
                                 child: const Icon(
@@ -515,8 +523,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       if (category.isNotEmpty)
                                         _heroPill(
@@ -546,6 +553,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                                 ),
                               ],
                             ),
+              
                             const SizedBox(height: 20),
                             Container(
                               decoration: BoxDecoration(
