@@ -1236,29 +1236,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 40),
-              const SizedBox(height: 10),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold)),
-              Text(title, style: const TextStyle(color: Colors.grey)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildClubApprovals() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -1402,60 +1379,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Future<void> _exportUserList() async {
-    try {
-      // 1. Fetch all users from Firestore
-      final snapshot =
-          await FirebaseFirestore.instance.collection('users').get();
-
-      if (snapshot.docs.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No users found to export!")),
-        );
-        return;
-      }
-
-      // 2. Define the header and map the data
-      List<List<dynamic>> csvRows = [];
-
-      // Add Header Row
-      csvRows.add(["Display Name", "Student ID", "Email", "Role"]);
-
-      // Add User Data Rows
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        csvRows.add([
-          data['displayName'] ?? 'N/A',
-          data['studentId'] ?? 'N/A',
-          data['email'] ?? 'N/A',
-          data['role'] ?? 'student',
-        ]);
-      }
-
-      // 3. Convert to CSV string
-      String csvString = const ListToCsvConverter().convert(csvRows);
-
-      // 4. Trigger Download (Web Logic)
-      final bytes = utf8.encode(csvString);
-      final blob = html.Blob([bytes], 'text/csv');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute("download",
-            "APU_Connect_Users_${DateTime.now().day}_${DateTime.now().month}.csv")
-        ..click();
-      html.Url.revokeObjectUrl(url);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Exporting CSV...")),
-      );
-    } catch (e) {
-      debugPrint("Export Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Export failed: $e")),
-      );
-    }
-  }
-
   Future<void> _exportData(String collectionName) async {
     try {
       // 1. Fetch data based on the collection passed (e.g., 'clubs' or 'users')
@@ -1502,14 +1425,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
       // 3. Convert and Download
       String csvString = const ListToCsvConverter().convert(csvRows);
-      final bytes = utf8.encode(csvString);
-      final blob = html.Blob([bytes], 'text/csv');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute(
-            "download", "APU_${collectionName}_${DateTime.now().day}.csv")
-        ..click();
-      html.Url.revokeObjectUrl(url);
+        final bytes = utf8.encode(csvString);
+        final blob = html.Blob([bytes], 'text/csv');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+
+        final anchor = html.AnchorElement(href: url);
+        anchor.setAttribute("download", "APU_${collectionName}_${DateTime.now().day}.csv");
+        anchor.click(); 
+        html.Url.revokeObjectUrl(url);
     } catch (e) {
       debugPrint("Export Error: $e");
     }
@@ -1669,26 +1592,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Filter the users based on search query
               final filteredUsers = snapshot.data!.docs.where((doc) {
                 try {
-                  // 1. Basic Data Check
                   final data = doc.data() as Map<String, dynamic>?;
                   if (data == null) return false;
 
-                  // 2. Query Preparation
-                  final String query = _userSearchQuery.trim().toLowerCase();
                   if (query.isEmpty) {
-                    return true; // Show everyone if search is empty
+                    return true; 
                   }
 
-                  // 3. Field Extraction with Fallbacks
                   final String name =
                       (data['displayName'] ?? "").toString().toLowerCase();
                   final String tp =
                       (data['studentId'] ?? "").toString().toLowerCase();
 
-                  // 4. Matching Logic
                   final bool matches =
                       name.contains(query) || tp.contains(query);
-
                   return matches;
                 } catch (e) {
                   // If one specific user document is broken, skip it and print the error
@@ -1951,9 +1868,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         onTap: () => _showEventDetails(context, data),
                         trailing: IconButton(
-                          icon:
-                              const Icon(Icons.delete_sweep, color: Colors.red),
-                          onPressed: () => _confirmDelete(event.id),
+                          icon: const Icon(Icons.delete_sweep, color: Colors.red),
+                          onPressed: () {
+                            // 1. Safely extract the current title for logs and notifications
+                            final String currentTitle = data['title'] ?? "Unnamed Event";
+
+                            // 2. Call your warning-free multi-parameter dialog handler
+                            _confirmDeleteEvent(event.id, currentTitle);
+                          },
                         ),
                         isThreeLine: true,
                       ),
@@ -2170,14 +2092,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _confirmDelete(String eventId) async {
-    // Add a confirmation dialog here for safety
-    await FirebaseFirestore.instance.collection('events').doc(eventId).delete();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Event removed by Admin")),
     );
   }
 

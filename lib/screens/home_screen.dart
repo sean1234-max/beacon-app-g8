@@ -345,7 +345,6 @@ class EventListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    String userRole = 'student';
 
     return Scaffold(
       body: SingleChildScrollView(
