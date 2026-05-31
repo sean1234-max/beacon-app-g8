@@ -147,9 +147,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     try {
       // 1. Process unregistration across all Firestore targets
       await DatabaseService().leaveEvent(widget.event.id, userId!);
-
-      // 2. ADDED: Save unregistration notification document to user subcollection
-      final String eventTitle = widget.event.title ?? "the event";
       
       await FirebaseFirestore.instance
           .collection('users')
@@ -157,7 +154,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           .collection('notifications')
           .add({
         'title': "Left Event Confirmation",
-        'body': "You have successfully unregistered from '$eventTitle'.",
+        'body': "You have successfully unregistered from '${widget.event.title}'.",
         'timestamp': FieldValue.serverTimestamp(),
         'isRead': false,
         'type': 'event_unregistration',

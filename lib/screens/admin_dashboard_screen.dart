@@ -1425,14 +1425,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
       // 3. Convert and Download
       String csvString = const ListToCsvConverter().convert(csvRows);
-      final bytes = utf8.encode(csvString);
-      final blob = html.Blob([bytes], 'text/csv');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute(
-            "download", "APU_${collectionName}_${DateTime.now().day}.csv")
-        ..click();
-      html.Url.revokeObjectUrl(url);
+        final bytes = utf8.encode(csvString);
+        final blob = html.Blob([bytes], 'text/csv');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+
+        final anchor = html.AnchorElement(href: url);
+        anchor.setAttribute("download", "APU_${collectionName}_${DateTime.now().day}.csv");
+        anchor.click(); 
+        html.Url.revokeObjectUrl(url);
     } catch (e) {
       debugPrint("Export Error: $e");
     }
@@ -1592,26 +1592,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Filter the users based on search query
               final filteredUsers = snapshot.data!.docs.where((doc) {
                 try {
-                  // 1. Basic Data Check
                   final data = doc.data() as Map<String, dynamic>?;
                   if (data == null) return false;
 
-                  // 2. Query Preparation
-                  final String query = _userSearchQuery.trim().toLowerCase();
                   if (query.isEmpty) {
-                    return true; // Show everyone if search is empty
+                    return true; 
                   }
 
-                  // 3. Field Extraction with Fallbacks
                   final String name =
                       (data['displayName'] ?? "").toString().toLowerCase();
                   final String tp =
                       (data['studentId'] ?? "").toString().toLowerCase();
 
-                  // 4. Matching Logic
                   final bool matches =
                       name.contains(query) || tp.contains(query);
-
                   return matches;
                 } catch (e) {
                   // If one specific user document is broken, skip it and print the error
@@ -1874,9 +1868,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         onTap: () => _showEventDetails(context, data),
                         trailing: IconButton(
-                          icon:
-                              const Icon(Icons.delete_sweep, color: Colors.red),
-                          onPressed: () => _confirmDelete(event.id),
+                          icon: const Icon(Icons.delete_sweep, color: Colors.red),
+                          onPressed: () {
+                            // 1. Safely extract the current title for logs and notifications
+                            final String currentTitle = data['title'] ?? "Unnamed Event";
+
+                            // 2. Call your warning-free multi-parameter dialog handler
+                            _confirmDeleteEvent(event.id, currentTitle);
+                          },
                         ),
                         isThreeLine: true,
                       ),
@@ -2093,14 +2092,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _confirmDelete(String eventId) async {
-    // Add a confirmation dialog here for safety
-    await FirebaseFirestore.instance.collection('events').doc(eventId).delete();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Event removed by Admin")),
     );
   }
 

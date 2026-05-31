@@ -19,7 +19,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
   String _userRole = 'student';
   String _currentUserName = 'Student';
-
+  String _selectedFilter = 'All';
+  
   @override
   void initState() {
     super.initState();
@@ -129,6 +130,15 @@ class _ClubsScreenState extends State<ClubsScreen> {
   //  EXPLORE LAYOUT (student view)
   // ─────────────────────────────────────────────
 
+  // ─────────────────────────────────────────────
+  //  EXPLORE LAYOUT (With Create Club Floating Button)
+  // ─────────────────────────────────────────────
+  // 🚀 Add this variable to your State class if it's not already there:
+  // String _selectedFilter = 'All';
+
+  // ─────────────────────────────────────────────
+  //  EXPLORE LAYOUT 
+  // ─────────────────────────────────────────────
   Widget _buildExploreLayout() {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
@@ -141,20 +151,85 @@ class _ClubsScreenState extends State<ClubsScreen> {
         foregroundColor: AppTheme.primaryBlue,
         elevation: 0,
       ),
-      body: _buildExploreContent(),
+      body: Column(
+        children: [
+          _buildFilterChips(), // 🚀 Added horizontal filter bar
+          Expanded(child: _buildExploreContent()),
+        ],
+      ),
+      floatingActionButton: _userRole == 'club_leader' 
+          ? null 
+          : FloatingActionButton.extended(
+              backgroundColor: AppTheme.primaryBlue,
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                "Create Club", 
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () => _showCreateClubSheet(context),
+            ),
     );
   }
 
   // ─────────────────────────────────────────────
-  //  EXPLORE CONTENT (reused by both student & leader tab)
+  //  FILTER CHIPS WIDGET
   // ─────────────────────────────────────────────
+  Widget _buildFilterChips() {
+    final categories = ['All', 'Sports', 'Academic', 'Arts', 'Tech'];
 
+    return Container(
+      height: 60,
+      color: Colors.white,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final isSelected = _selectedFilter == category;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ChoiceChip(
+              label: Text(category),
+              selected: isSelected,
+              selectedColor: AppTheme.primaryBlue,
+              backgroundColor: const Color(0xFFF0F2F5),
+              checkmarkColor: Colors.white,
+              // 🚀 FIX: Correctly styling the chip text via labelStyle
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Colors.black87,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              onSelected: (bool selected) {
+                if (selected) {
+                  setState(() {
+                    _selectedFilter = category;
+                  });
+                }
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  EXPLORE CONTENT (Dynamically Filtered)
+  // ─────────────────────────────────────────────
   Widget _buildExploreContent() {
+    // 🚀 Build dynamic query based on the selected category filter chip
+    Query query = FirebaseFirestore.instance
+        .collection('clubs')
+        .where('status', isEqualTo: 'approved');
+
+    if (_selectedFilter != 'All') {
+      query = query.where('category', isEqualTo: _selectedFilter);
+    }
+
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('clubs')
-          .where('status', isEqualTo: 'approved')
-          .snapshots(),
+      stream: query.snapshots(), // 🚀 Uses the dynamic query chain
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -163,7 +238,14 @@ class _ClubsScreenState extends State<ClubsScreen> {
         final clubs = snapshot.data!.docs;
 
         if (clubs.isEmpty) {
-          return const Center(child: Text("No clubs available yet."));
+          return Center(
+            child: Text(
+              _selectedFilter == 'All'
+                  ? "No clubs available yet."
+                  : "No clubs found under '$_selectedFilter'.",
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          );
         }
 
         return ListView.builder(
@@ -173,7 +255,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
             final clubDoc = clubs[index];
             final club = Club.fromFirestore(clubDoc);
 
-            // Helper logic to route smoothly without route stack corruption
             Future<void> handlePostJoinNavigation() async {
               final freshClubDoc = await FirebaseFirestore.instance
                   .collection('clubs')
@@ -182,7 +263,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
               if (!mounted) return;
 
-              // 🚀 FIX: Normal push so the back arrow always links directly to this Explore main page
               await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -218,7 +298,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   );
 
                   if (joined == true && mounted) {
-                    // Cleanly handle navigation stack history
                     await handlePostJoinNavigation();
                   }
                 }
@@ -232,7 +311,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
                 );
 
                 if (joined == true && mounted) {
-                  // Cleanly handle navigation stack history
                   await handlePostJoinNavigation();
                 }
               },
@@ -243,6 +321,125 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
+  void _showCreateClubSheet(BuildContext context) {
+    final nameController = TextEditingController();
+    final descController = TextEditingController();
+    String selectedCategory = 'Sports';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Register Your Club",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                  labelText: "Club Name", border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 15),
+            DropdownButtonFormField<String>(
+              value: selectedCategory, // 🚀 FIX: Changed 'initialValue' to 'value' for DropdownButtonFormField
+              items: ['Sports', 'Academic', 'Arts', 'Tech']
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
+              onChanged: (val) => selectedCategory = val!,
+              decoration: const InputDecoration(
+                  labelText: "Category", border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: descController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                  labelText: "Description", border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    padding: const EdgeInsets.all(15)),
+                onPressed: () async {
+                  final String clubName = nameController.text.trim();
+                  if (clubName.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Please enter a club name")),
+                    );
+                    return;
+                  }
+
+                  // Dismiss the bottom sheet panel before async writes
+                  Navigator.pop(context);
+
+                  try {
+                    // 1. Add the new record to your Firestore database collection
+                    DocumentReference newClubRef = await FirebaseFirestore.instance.collection('clubs').add({
+                      'name': clubName,
+                      'description': descController.text.trim(),
+                      'category': selectedCategory,
+                      'leaderId': _currentUserId,
+                      'status': 'pending',
+                      'createdAt': FieldValue.serverTimestamp(),
+                    });
+
+                    // 2. Fetch the fresh cloud snapshot representation for the approval UI
+                    DocumentSnapshot freshClubDoc = await newClubRef.get();
+
+                    // 3. Update the user role field in Firestore database
+                    await FirebaseFirestore.instance.collection('users').doc(_currentUserId).update({
+                      'role': 'club_leader',
+                    });
+
+                    if (mounted) {
+                      // 4. Update local state to hide the Create Club button instantly
+                      setState(() {
+                        _userRole = 'club_leader';
+                      });
+
+                      // 5. Notify the user and immediately view the pending display interface
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Club request sent! Awaiting Admin approval."),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => _buildPendingApprovalScreen(freshClubDoc),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    debugPrint("Error launching registration pipeline: $e");
+                  }
+                },
+                child: const Text("Launch Club",
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
   // ─────────────────────────────────────────────
   //  CLUB MANAGEMENT INTERFACE (leader / member)
   // ─────────────────────────────────────────────
@@ -1157,6 +1354,10 @@ class _ClubsScreenState extends State<ClubsScreen> {
   // ─────────────────────────────────────────────
 
   Widget _buildPendingApprovalScreen(DocumentSnapshot clubDoc) {
+    // 🚀 Step 1: Safely extract data and provide fallbacks to prevent Null subtype crashes
+    final Map<String, dynamic>? data = clubDoc.data() as Map<String, dynamic>?;
+    final String clubName = data?['name'] ?? "Your Club";
+
     return Scaffold(
       body: Center(
         child: Padding(
@@ -1168,7 +1369,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   size: 100, color: Colors.orange),
               const SizedBox(height: 24),
               Text(
-                "${clubDoc['name']} is Under Review",
+                "$clubName is Under Review", // 🚀 Step 2: Use the safe, non-null variable here
                 style:
                     const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
@@ -1366,96 +1567,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
               const SizedBox(height: 20),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showCreateClubSheet(BuildContext context) {
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
-    String selectedCategory = 'Sports';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 20,
-          right: 20,
-          top: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Register Your Club",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                  labelText: "Club Name", border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 15),
-            DropdownButtonFormField<String>(
-              initialValue: selectedCategory,
-              items: ['Sports', 'Academic', 'Arts', 'Tech']
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (val) => selectedCategory = val!,
-              decoration: const InputDecoration(
-                  labelText: "Category", border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: descController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                  labelText: "Description", border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    padding: const EdgeInsets.all(15)),
-                onPressed: () async {
-                  if (nameController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Please enter a club name")),
-                    );
-                    return;
-                  }
-                  await FirebaseFirestore.instance.collection('clubs').add({
-                    'name': nameController.text.trim(),
-                    'description': descController.text.trim(),
-                    'category': selectedCategory,
-                    'leaderId': _currentUserId,
-                    'status': 'pending',
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text("Club request sent! Awaiting Admin approval."),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  }
-                },
-                child: const Text("Launch Club",
-                    style: TextStyle(color: Colors.white)),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
         ),
       ),
     );

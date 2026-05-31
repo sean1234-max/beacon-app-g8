@@ -45,7 +45,6 @@ class ClubLeaderDashboard extends StatelessWidget {
                 );
               }
 
-              // 2. LOCK: If rejected, show ONLY the rejected card and STOP here
               if (status == 'rejected') {
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
