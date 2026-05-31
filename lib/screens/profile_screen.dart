@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'add_event_screen.dart';
 import 'my_tickets_screen.dart';
 import 'login_screen.dart';
-import 'edit_bio_screen.dart';
+import 'edit_profile_screen.dart';
 import 'club_management_screen.dart';
 import 'club_list_screen.dart';
 import 'event_history_screen.dart';
@@ -438,11 +438,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final items = [
       {
         'icon': Icons.edit_outlined,
-        'title': 'Edit Bio',
+        'title': 'Edit Profile',
         'sub': 'Update your personal details',
         'onTap': () {
           Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const EditBioScreen()));
+              MaterialPageRoute(builder: (_) => const EditProfileScreen()));
         }
       },
       {

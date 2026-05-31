@@ -181,12 +181,11 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   .get();
 
               if (!mounted) return;
-
-              // 🚀 FIX: Normal push so the back arrow always links directly to this Explore main page
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => _buildClubManagementInterface(freshClubDoc),
+                  builder: (context) =>
+                      _buildClubManagementInterface(freshClubDoc),
                 ),
               );
             }
@@ -206,7 +205,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => _buildClubManagementInterface(clubDoc),
+                      builder: (context) =>
+                          _buildClubManagementInterface(clubDoc),
                     ),
                   );
                 } else {
