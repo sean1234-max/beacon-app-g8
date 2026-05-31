@@ -1236,29 +1236,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 40),
-              const SizedBox(height: 10),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold)),
-              Text(title, style: const TextStyle(color: Colors.grey)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildClubApprovals() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -1399,60 +1376,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       });
     } catch (e) {
       debugPrint("Failed to create log: $e");
-    }
-  }
-
-  Future<void> _exportUserList() async {
-    try {
-      // 1. Fetch all users from Firestore
-      final snapshot =
-          await FirebaseFirestore.instance.collection('users').get();
-
-      if (snapshot.docs.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No users found to export!")),
-        );
-        return;
-      }
-
-      // 2. Define the header and map the data
-      List<List<dynamic>> csvRows = [];
-
-      // Add Header Row
-      csvRows.add(["Display Name", "Student ID", "Email", "Role"]);
-
-      // Add User Data Rows
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        csvRows.add([
-          data['displayName'] ?? 'N/A',
-          data['studentId'] ?? 'N/A',
-          data['email'] ?? 'N/A',
-          data['role'] ?? 'student',
-        ]);
-      }
-
-      // 3. Convert to CSV string
-      String csvString = const ListToCsvConverter().convert(csvRows);
-
-      // 4. Trigger Download (Web Logic)
-      final bytes = utf8.encode(csvString);
-      final blob = html.Blob([bytes], 'text/csv');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute("download",
-            "APU_Connect_Users_${DateTime.now().day}_${DateTime.now().month}.csv")
-        ..click();
-      html.Url.revokeObjectUrl(url);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Exporting CSV...")),
-      );
-    } catch (e) {
-      debugPrint("Export Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Export failed: $e")),
-      );
     }
   }
 

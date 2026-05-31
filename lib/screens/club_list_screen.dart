@@ -77,7 +77,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Leader Dashboard"),
+          title: const Text("Club Leader Dashboard"),
           backgroundColor: Colors.white,
           foregroundColor: AppTheme.primaryBlue,
           elevation: 0,
@@ -291,15 +291,17 @@ class _ClubsScreenState extends State<ClubsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: const Icon(
-                                Icons.arrow_back_ios_rounded,
-                                color: Colors.white,
-                                size: 20,
+                            if (_userRole != 'club_leader') ...[
+                              GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: const Icon(
+                                  Icons.arrow_back_ios_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
+                              const SizedBox(height: 16),
+                            ],
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -628,33 +630,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
     if (timestamp == null) return "Just now";
     final DateTime date = (timestamp as Timestamp).toDate();
     return "${date.day}/${date.month}/${date.year}";
-  }
-
-  Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.grey[200]!),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 8),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-              Text(label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildToolCard(
@@ -1541,112 +1516,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  void _showCreateEventSheet(BuildContext context, String clubId) {
-    final titleController = TextEditingController();
-    final descController = TextEditingController();
-    DateTime selectedDate = DateTime.now();
-    TimeOfDay selectedTime = TimeOfDay.now();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-              left: 20,
-              right: 20,
-              top: 20,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("Plan New Event",
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                      labelText: "Event Title", border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(
-                      labelText: "Description", border: OutlineInputBorder()),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ListTile(
-                        title: const Text("Date"),
-                        subtitle: Text(
-                            "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}"),
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: selectedDate,
-                            firstDate: DateTime.now(),
-                            lastDate:
-                                DateTime.now().add(const Duration(days: 365)),
-                          );
-                          if (date != null) {
-                            setModalState(() => selectedDate = date);
-                          }
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: ListTile(
-                        title: const Text("Time"),
-                        subtitle: Text(selectedTime.format(context)),
-                        onTap: () async {
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: selectedTime,
-                          );
-                          if (time != null) {
-                            setModalState(() => selectedTime = time);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo),
-                    onPressed: () {
-                      final finalDateTime = DateTime(
-                        selectedDate.year,
-                        selectedDate.month,
-                        selectedDate.day,
-                        selectedTime.hour,
-                        selectedTime.minute,
-                      );
-                      _submitEvent(context, clubId, titleController.text,
-                          descController.text, finalDateTime);
-                    },
-                    child: const Text("Create Event",
-                        style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   void _showEditEventSheet(DocumentSnapshot eventDoc) {
     final event = eventDoc.data() as Map<String, dynamic>;
     final titleController = TextEditingController(text: event['title']);
@@ -1827,45 +1696,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
       }
     } catch (e) {
       debugPrint("Update Error: $e");
-    }
-  }
-
-  Future<void> _submitEvent(BuildContext context, String clubId, String title,
-      String desc, DateTime date) async {
-    if (title.trim().isEmpty || desc.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill in all fields")),
-      );
-      return;
-    }
-    try {
-      await FirebaseFirestore.instance
-          .collection('clubs')
-          .doc(clubId)
-          .collection('events')
-          .add({
-        'title': title.trim(),
-        'description': desc.trim(),
-        'date': Timestamp.fromDate(date),
-        'createdAt': FieldValue.serverTimestamp(),
-        'creatorId': _currentUserId,
-      });
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Event Created!"), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      debugPrint("Firebase Error: $e");
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Error: ${e.toString()}"),
-              backgroundColor: Colors.red),
-        );
-      }
     }
   }
 }
