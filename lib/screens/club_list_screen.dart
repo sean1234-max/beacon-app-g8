@@ -219,10 +219,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
   }
 
   // ─────────────────────────────────────────────
-  //  EXPLORE CONTENT (Dynamically Filtered)
+  //  EXPLORE CONTENT (Dynamically Filtered & Hides Owned Club)
   // ─────────────────────────────────────────────
   Widget _buildExploreContent() {
-    // 🚀 Build dynamic query based on the selected category filter chip
     Query query = FirebaseFirestore.instance
         .collection('clubs')
         .where('status', isEqualTo: 'approved');
@@ -232,13 +231,19 @@ class _ClubsScreenState extends State<ClubsScreen> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: query.snapshots(), // 🚀 Uses the dynamic query chain
+      stream: query.snapshots(), 
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final clubs = snapshot.data!.docs;
+        // 🚀 FIX: Filter out any club that belongs to the current logged-in leader
+        final allClubs = snapshot.data!.docs;
+        final clubs = allClubs.where((doc) {
+          final Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
+          final String leaderId = data?['leaderId'] ?? '';
+          return leaderId != _currentUserId; // Only keep clubs NOT owned by the user
+        }).toList();
 
         if (clubs.isEmpty) {
           return Center(
