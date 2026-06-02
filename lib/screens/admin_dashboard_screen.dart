@@ -9,6 +9,7 @@ import 'package:csv/csv.dart';
 import 'package:universal_html/html.dart' as html;
 import '../theme/app_theme.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'login_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -21,7 +22,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
   int _selectedIndex = 0;
   bool _isDashboardMounted = true;
-  // Initialize search query
   String _userSearchQuery = "";
   String _searchQuery = "";
 
@@ -54,19 +54,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: "Logout",
-            onPressed: () async {
-              // 
-              await FirebaseAuth.instance.signOut();
-              
-              WidgetsBinding.instance.addPostFrameCallback((_) {
+              icon: const Icon(Icons.logout, color: Colors.white),
+              tooltip: "Logout",
+              onPressed: () async {
+                // 1. Immediately drop the dashboard ticker loop switch
+                _isDashboardMounted = false; 
+
+                // 2. Kill the stack and route cleanly back to a brand new LoginScreen instance
                 if (context.mounted) {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
                 }
-              });
-            },
-          ),
+
+                // 3. Clean up the server authentication session safely in the background
+                await FirebaseAuth.instance.signOut();
+              },
+            ),
           const SizedBox(width: 12),
         ],
       ),
@@ -568,9 +573,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildServerHealthPanel() {
-    // 🚀 REAL-TIME ENGINE: Creates a continuous stream firing a ping sequence every 3 seconds
     Stream<Map<String, dynamic>> streamInfrastructureHealth() async* {
       while (_isDashboardMounted) {
+        // 🚀 SAFETY CHECK: If the user clicked logout, exit the stream immediately!
+        if (FirebaseAuth.instance.currentUser == null) {
+          break;
+        }
+
         String firestoreStatus = "Connecting...";
         Color firestoreColor = Colors.orange;
         
@@ -581,7 +590,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         Color fcmColor = Colors.red;
 
         try {
-          // 1. Live Firestore Ping Measurement
           final stopwatch = Stopwatch()..start();
           await FirebaseFirestore.instance.collection('system_logs').limit(1).get().timeout(
             const Duration(seconds: 2),
@@ -591,12 +599,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           firestoreStatus = "Operational (${stopwatch.elapsedMilliseconds}ms)";
           firestoreColor = Colors.green;
         } catch (e) {
+          // If we logged out mid-request, catch it silently
+          if (FirebaseAuth.instance.currentUser == null) break;
           firestoreStatus = "Latency Alert / Offline";
           firestoreColor = Colors.red;
         }
 
         try {
-          // 2. Fetch Storage Aggregates
+          if (FirebaseAuth.instance.currentUser == null) break;
           DocumentSnapshot storageMeta = await FirebaseFirestore.instance
               .collection('system_metrics')
               .doc('storage_summary')
@@ -614,26 +624,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             storageColor = Colors.green;
           }
         } catch (e) {
+          if (FirebaseAuth.instance.currentUser == null) break;
           storageStatus = "Metrics Unavailable";
           storageColor = Colors.grey;
         }
 
         try {
-          // 3. Live FCM Gateway Token Check
+          if (FirebaseAuth.instance.currentUser == null) break;
           String? token = await FirebaseMessaging.instance.getToken();
           if (token != null) {
             fcmStatus = "Connected (Active)";
             fcmColor = Colors.green;
           }
         } catch (e) {
+          if (FirebaseAuth.instance.currentUser == null) break;
           fcmStatus = "Gateway Error";
           fcmColor = Colors.red;
         }
 
-        // 🚀 SAFETY CHECK: If user switched tabs during network latency, abort immediately
-        if (!_isDashboardMounted) break;
+        if (!_isDashboardMounted || FirebaseAuth.instance.currentUser == null) break;
 
-        // Emit the fresh dataset map up to the StreamBuilder UI layout
         yield {
           'firestoreStatus': firestoreStatus,
           'firestoreColor': firestoreColor,
@@ -643,7 +653,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           'fcmColor': fcmColor,
         };
 
-        // ⏱️ TICK RATE: Wait 3 seconds before spinning the loop and pinging again
         await Future.delayed(const Duration(seconds: 3));
       }
     }
@@ -668,12 +677,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           StreamBuilder<Map<String, dynamic>>(
             stream: streamInfrastructureHealth(),
             builder: (context, snapshot) {
-              // Show loader only on the very first initial network boot calculation
-              if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(
-                  height: 100,
-                  child: Center(child: CircularProgressIndicator()),
-                );
+              if (snapshot.hasError) {
+                if (snapshot.error.toString().contains('permission-denied') || 
+                    FirebaseAuth.instance.currentUser == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return Text("Error fetching logs: ${snapshot.error}");
               }
 
               final metrics = snapshot.data ?? {
@@ -989,7 +998,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 24),
           
-          // 🚀 STREAM 1: Read user roles dynamically from the 'users' collection
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('users').snapshots(),
             builder: (context, userSnapshot) {
@@ -1101,7 +1109,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
-  // Sub-helper for the distribution rows
+
   Widget _buildMetricDistributionRow(String title, String trailingValue, Color color, double percentage) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1818,7 +1826,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                         ),
                         
-                        // 🚀 FULL CONTROL DROPDOWN: Allows Admins to toggle between all 3 systemic roles
                         trailing: DropdownButtonHideUnderline(
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1828,7 +1835,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: DropdownButton<String>(
-                              // Validates against all three possible role keys
                               value: ['student', 'club_leader', 'admin'].contains(currentRole) 
                                   ? currentRole 
                                   : 'student',

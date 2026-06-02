@@ -219,18 +219,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               title: const Text("Logout"),
               onTap: () async {
                 try {
-                  await FirebaseAuth.instance.signOut();
-
                   if (context.mounted) {
                     Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                          builder: (context) => const LoginScreen()),
+                      MaterialPageRoute(builder: (context) => const LoginScreen()),
                       (route) => false,
                     );
                   }
+
+                  // 2. Disconnect auth state downstream
+                  await FirebaseAuth.instance.signOut();
                 } catch (e) {
-                  debugPrint(
-                      "Logout runtime processing error: ${e.toString()}");
+                  debugPrint("Logout processing error: ${e.toString()}");
                 }
               },
             ),

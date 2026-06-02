@@ -524,16 +524,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: OutlinedButton.icon(
               onPressed: () async {
                 try {
-                  // 1. Sign out from Firebase Auth
-                  await FirebaseAuth.instance.signOut();
-
-                  // 2. Clear the screen stack and instantly jump to Login Screen
+                  // 1. Clear the screen stack and instantly route to the Login Screen first
                   if (context.mounted) {
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
                       (route) => false,
                     );
                   }
+
+                  // 2. Clear out the Firebase Auth token session now that the layout is unmounted
+                  await FirebaseAuth.instance.signOut();
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
