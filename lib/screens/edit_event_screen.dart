@@ -1,8 +1,6 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/event_model.dart'; // Make sure this path is correct
+import '../models/event_model.dart';
 import 'package:intl/intl.dart';
 
 class EditEventScreen extends StatefulWidget {

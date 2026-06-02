@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -54,10 +52,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     super.dispose();
   }
 
-  // ─────────────────────────────────────────────
   //  PICKERS
-  // ─────────────────────────────────────────────
-
   Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,
@@ -127,10 +122,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     });
   }
 
-  // ─────────────────────────────────────────────
   //  SUBMIT
-  // ─────────────────────────────────────────────
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_titleController.text.trim().isEmpty) {
@@ -406,16 +398,12 @@ class _AddEventScreenState extends State<AddEventScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  POSTER UPLOAD
-  // ─────────────────────────────────────────────
-
   Widget _buildPosterUpload() {
     return GestureDetector(
       onTap: () => _pickImage(isPoster: true),
       child: AspectRatio(
-        // A4 portrait ratio (1 : √2 ≈ 1 : 1.414) — matches standard event posters
-        aspectRatio: 1 / 1.414,
+        aspectRatio: 1 / 1.414, //A4 poster size
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -492,10 +480,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  PAYMENT SECTION
-  // ─────────────────────────────────────────────
-
   Widget _buildPaymentSection() {
     return _buildSection(
       icon: Icons.payment_outlined,
@@ -709,10 +694,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  BUTTONS
-  // ─────────────────────────────────────────────
-
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
@@ -753,10 +735,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  REUSABLE WIDGETS
-  // ─────────────────────────────────────────────
-
   Widget _buildSection({
     required IconData icon,
     required Color color,

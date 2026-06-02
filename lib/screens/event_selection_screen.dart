@@ -1,8 +1,5 @@
 // get current user id from firebase
 //show each event in a ListTitle inside StreamBuilder
-
-// ignore_for_file: non_constant_identifier_names, avoid_types_as_parameter_names
-
 import 'package:assignment/models/event_model.dart';
 import 'package:assignment/screens/scan_qr_screen.dart';
 import 'package:assignment/services/database_service.dart';

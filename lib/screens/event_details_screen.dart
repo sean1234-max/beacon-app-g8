@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'dart:convert';
 import 'package:assignment/models/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // needed for _loadPoster + _loadExistingTicket
@@ -147,14 +145,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     try {
       // 1. Process unregistration across all Firestore targets
       await DatabaseService().leaveEvent(widget.event.id, userId!);
-      
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .collection('notifications')
           .add({
         'title': "Left Event Confirmation",
-        'body': "You have successfully unregistered from '${widget.event.title}'.",
+        'body':
+            "You have successfully unregistered from '${widget.event.title}'.",
         'timestamp': FieldValue.serverTimestamp(),
         'isRead': false,
         'type': 'event_unregistration',
@@ -165,15 +164,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         // 3. Show brief confirmation snackbar
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("You have left the event.")));
-        
+
         // 4. Navigate back to the Event Dashboard screen
         Navigator.pop(context);
       }
     } catch (e) {
       debugPrint("Unregister Error: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Failed to leave event: $e")));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Failed to leave event: $e")));
       }
     } finally {
       if (mounted) setState(() => _isRegistering = false);

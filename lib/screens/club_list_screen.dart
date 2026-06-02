@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
-
 import 'package:assignment/screens/club_chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -231,7 +229,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: query.snapshots(), 
+      stream: query.snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -240,9 +238,11 @@ class _ClubsScreenState extends State<ClubsScreen> {
         // 🚀 FIX: Filter out any club that belongs to the current logged-in leader
         final allClubs = snapshot.data!.docs;
         final clubs = allClubs.where((doc) {
-          final Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
+          final Map<String, dynamic>? data =
+              doc.data() as Map<String, dynamic>?;
           final String leaderId = data?['leaderId'] ?? '';
-          return leaderId != _currentUserId; // Only keep clubs NOT owned by the user
+          return leaderId !=
+              _currentUserId; // Only keep clubs NOT owned by the user
         }).toList();
 
         if (clubs.isEmpty) {
@@ -461,14 +461,14 @@ class _ClubsScreenState extends State<ClubsScreen> {
   // ─────────────────────────────────────────────
   //  CLUB MANAGEMENT INTERFACE (leader / member)
   // ─────────────────────────────────────────────
-  
+
   Widget _buildClubManagementInterface(DocumentSnapshot clubDoc) {
     final data = clubDoc.data() as Map<String, dynamic>;
     final String category = data['category'] ?? '';
     final String name = data['name'] ?? '';
     final String description = data['description'] ?? '';
     final int maxMembers = (data['maxMembers'] as num?)?.toInt() ?? 200;
-  
+
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4F8),
       body: StreamBuilder<QuerySnapshot>(
@@ -594,31 +594,39 @@ class _ClubsScreenState extends State<ClubsScreen> {
                                     child: StreamBuilder<QuerySnapshot>(
                                       stream: FirebaseFirestore.instance
                                           .collection('events')
-                                          .where('clubId', isEqualTo: clubDoc.id)
+                                          .where('clubId',
+                                              isEqualTo: clubDoc.id)
                                           .snapshots(),
                                       builder: (context, snapshot) {
                                         // Default to '0' while waiting or if an error happens
-                                        if (!snapshot.hasData) return _heroStat('EVENTS', '0');
+                                        if (!snapshot.hasData)
+                                          return _heroStat('EVENTS', '0');
 
                                         final now = DateTime.now();
 
                                         // 🎯 Match the exact same logic used in your upcoming events slider
-                                        final int upcomingCount = snapshot.data!.docs.where((doc) {
+                                        final int upcomingCount =
+                                            snapshot.data!.docs.where((doc) {
                                           try {
-                                            final dataMap = doc.data() as Map<String, dynamic>?;
+                                            final dataMap = doc.data()
+                                                as Map<String, dynamic>?;
                                             if (dataMap == null) return false;
 
-                                            final Timestamp? dt = (dataMap['dateTime'] ?? dataMap['date']) as Timestamp?;
+                                            final Timestamp? dt =
+                                                (dataMap['dateTime'] ??
+                                                        dataMap['date'])
+                                                    as Timestamp?;
                                             if (dt == null) return false;
 
                                             // Only count events scheduled in the future
                                             return dt.toDate().isAfter(now);
                                           } catch (_) {
-                                            return false; 
+                                            return false;
                                           }
                                         }).length;
 
-                                        return _heroStat('EVENTS', '$upcomingCount');
+                                        return _heroStat(
+                                            'EVENTS', '$upcomingCount');
                                       },
                                     ),
                                   ),
@@ -712,88 +720,105 @@ class _ClubsScreenState extends State<ClubsScreen> {
                           const SizedBox(height: 24),
                           const Text(
                             "Upcoming Events",
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 12),
                           StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('events')
-                              .where('clubId', isEqualTo: clubDoc.id)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            // 🚀 Check for errors explicitly to avoid silent freezes
-                            if (snapshot.hasError) {
-                              return Center(child: Text("Error loading events: ${snapshot.error}"));
-                            }
-                            
-                            if (!snapshot.hasData) return const SizedBox();
-                            
-                            final now = DateTime.now();
-
-                            // 🚀 DEFENSIVE FIX: Safe filtering and sorting that won't throw "No element" or casting crashes
-                            final upcomingEventsList = snapshot.data!.docs.where((doc) {
-                              try {
-                                final dataMap = doc.data() as Map<String, dynamic>?;
-                                if (dataMap == null) return false;
-                                
-                                // Check either field variation safely
-                                final Timestamp? dt = (dataMap['dateTime'] ?? dataMap['date']) as Timestamp?;
-                                if (dt == null) return false;
-                                
-                                return dt.toDate().isAfter(now);
-                              } catch (_) {
-                                return false; // Skip corrupted items gracefully instead of crashing the tree
+                            stream: FirebaseFirestore.instance
+                                .collection('events')
+                                .where('clubId', isEqualTo: clubDoc.id)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              // 🚀 Check for errors explicitly to avoid silent freezes
+                              if (snapshot.hasError) {
+                                return Center(
+                                    child: Text(
+                                        "Error loading events: ${snapshot.error}"));
                               }
-                            }).toList();
 
-                            // Safe Sorting wrapper
-                            if (upcomingEventsList.isNotEmpty) {
-                              try {
-                                upcomingEventsList.sort((a, b) {
-                                  final aMap = a.data() as Map<String, dynamic>;
-                                  final bMap = b.data() as Map<String, dynamic>;
-                                  
-                                  final aTime = ((aMap['dateTime'] ?? aMap['date']) as Timestamp?)?.toDate() ?? now;
-                                  final bTime = ((bMap['dateTime'] ?? bMap['date']) as Timestamp?)?.toDate() ?? now;
-                                  
-                                  return aTime.compareTo(bTime);
-                                });
-                              } catch (e) {
-                                debugPrint("Sorting fallback caught: $e");
+                              if (!snapshot.hasData) return const SizedBox();
+
+                              final now = DateTime.now();
+
+                              // 🚀 DEFENSIVE FIX: Safe filtering and sorting that won't throw "No element" or casting crashes
+                              final upcomingEventsList =
+                                  snapshot.data!.docs.where((doc) {
+                                try {
+                                  final dataMap =
+                                      doc.data() as Map<String, dynamic>?;
+                                  if (dataMap == null) return false;
+
+                                  // Check either field variation safely
+                                  final Timestamp? dt = (dataMap['dateTime'] ??
+                                      dataMap['date']) as Timestamp?;
+                                  if (dt == null) return false;
+
+                                  return dt.toDate().isAfter(now);
+                                } catch (_) {
+                                  return false; // Skip corrupted items gracefully instead of crashing the tree
+                                }
+                              }).toList();
+
+                              // Safe Sorting wrapper
+                              if (upcomingEventsList.isNotEmpty) {
+                                try {
+                                  upcomingEventsList.sort((a, b) {
+                                    final aMap =
+                                        a.data() as Map<String, dynamic>;
+                                    final bMap =
+                                        b.data() as Map<String, dynamic>;
+
+                                    final aTime = ((aMap['dateTime'] ??
+                                                aMap['date']) as Timestamp?)
+                                            ?.toDate() ??
+                                        now;
+                                    final bTime = ((bMap['dateTime'] ??
+                                                bMap['date']) as Timestamp?)
+                                            ?.toDate() ??
+                                        now;
+
+                                    return aTime.compareTo(bTime);
+                                  });
+                                } catch (e) {
+                                  debugPrint("Sorting fallback caught: $e");
+                                }
                               }
-                            }
 
-                            if (upcomingEventsList.isEmpty) {
-                              return Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Center(
-                                  child: Text("No upcoming events planned yet.", style: TextStyle(color: Colors.grey)),
+                              if (upcomingEventsList.isEmpty) {
+                                return Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                        "No upcoming events planned yet.",
+                                        style: TextStyle(color: Colors.grey)),
+                                  ),
+                                );
+                              }
+
+                              return SizedBox(
+                                height: 160,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: upcomingEventsList.length,
+                                  itemBuilder: (context, index) {
+                                    final DocumentSnapshot eventDoc =
+                                        upcomingEventsList[index];
+
+                                    return _buildEventCard(
+                                      eventDoc,
+                                      clubDoc.id,
+                                      data['leaderId'] ?? '',
+                                    );
+                                  },
                                 ),
                               );
-                            }
-
-                            return SizedBox(
-                              height: 160,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: upcomingEventsList.length,
-                                itemBuilder: (context, index) {
-                                  final DocumentSnapshot eventDoc = upcomingEventsList[index]; 
-
-                                  return _buildEventCard(
-                                    eventDoc,           
-                                    clubDoc.id,         
-                                    data['leaderId'] ?? '',   
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
+                            },
+                          ),
                           const SizedBox(height: 24),
                           const Text("Recent Updates",
                               style: TextStyle(
@@ -964,10 +989,11 @@ class _ClubsScreenState extends State<ClubsScreen> {
   Widget _buildEventCard(
       DocumentSnapshot eventDoc, String clubId, String leaderId) {
     final event = eventDoc.data() as Map<String, dynamic>;
-    
+
     // 🚀 FIX 1: Read 'dateTime' instead of 'date' to prevent the Null type crash
     final Timestamp? timestamp = event['dateTime'] as Timestamp?;
-    final DateTime date = timestamp != null ? timestamp.toDate() : DateTime.now();
+    final DateTime date =
+        timestamp != null ? timestamp.toDate() : DateTime.now();
 
     final String creatorId = event['creatorId'] ?? '';
     final bool isCreator = (creatorId == _currentUserId);
@@ -1735,10 +1761,12 @@ class _ClubsScreenState extends State<ClubsScreen> {
     final event = eventDoc.data() as Map<String, dynamic>;
     final titleController = TextEditingController(text: event['title']);
     final descController = TextEditingController(text: event['description']);
-    
+
     // 🚀 FIX 1: Read 'dateTime' safely instead of 'date' to prevent the UI freeze crash
-    final Timestamp? timestamp = (event['dateTime'] ?? event['date']) as Timestamp?;
-    DateTime selectedDate = timestamp != null ? timestamp.toDate() : DateTime.now();
+    final Timestamp? timestamp =
+        (event['dateTime'] ?? event['date']) as Timestamp?;
+    DateTime selectedDate =
+        timestamp != null ? timestamp.toDate() : DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.fromDateTime(selectedDate);
 
     showModalBottomSheet(
@@ -1825,14 +1853,13 @@ class _ClubsScreenState extends State<ClubsScreen> {
                         selectedTime.hour,
                         selectedTime.minute,
                       );
-                      
+
                       _updateEvent(
-                        eventDoc.reference, 
+                        eventDoc.reference,
                         titleController.text,
-                        descController.text, 
+                        descController.text,
                         finalDateTime,
                       );
-                      
                     },
                     child: const Text("Save Changes",
                         style: TextStyle(color: Colors.white)),
@@ -1883,14 +1910,14 @@ class _ClubsScreenState extends State<ClubsScreen> {
         'title': title.trim(),
         'description': desc.trim(),
         // 🚀 FIX 1: Change 'date' to 'dateTime' to match your teammate's schema
-        'dateTime': Timestamp.fromDate(date), 
+        'dateTime': Timestamp.fromDate(date),
         'lastEditedAt': FieldValue.serverTimestamp(),
       });
-      
+
       if (mounted) {
         // 🚀 FIX 2: Only pop once! Let this function handle closing the sheet.
-        Navigator.pop(context); 
-        
+        Navigator.pop(context);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text("Event updated!"), backgroundColor: Colors.orange),
