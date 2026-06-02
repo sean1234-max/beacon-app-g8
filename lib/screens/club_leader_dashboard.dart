@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../theme/app_theme.dart'; // Adjust path to your theme file
+import '../theme/app_theme.dart';
 
 class ClubLeaderDashboard extends StatelessWidget {
   const ClubLeaderDashboard({super.key});
@@ -13,17 +13,20 @@ class ClubLeaderDashboard extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text("My Managed Clubs")),
       body: StreamBuilder<QuerySnapshot>(
+        // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
         stream: FirebaseFirestore.instance
             .collection('clubs')
             .where('leaderId', isEqualTo: currentUserId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
+
           final clubs = snapshot.data!.docs;
 
           if (clubs.isEmpty) {
-            return const Center(child: Text("You haven't registered any clubs yet."));
+            return const Center(
+                child: Text("You haven't registered any clubs yet."));
           }
 
           return ListView.builder(
@@ -35,28 +38,36 @@ class ClubLeaderDashboard extends StatelessWidget {
               // 1. LOCK: If pending, show ONLY the pending card and STOP here
               if (status == 'pending') {
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   color: Colors.orange.shade50,
                   child: const ListTile(
                     leading: Icon(Icons.hourglass_top, color: Colors.orange),
-                    title: Text("Club Pending Approval", style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("The admin is currently reviewing your request."),
+                    title: Text("Club Pending Approval",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle:
+                        Text("The admin is currently reviewing your request."),
                   ),
                 );
               }
 
               if (status == 'rejected') {
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   color: Colors.red.shade50,
                   child: ListTile(
                     leading: const Icon(Icons.error_outline, color: Colors.red),
-                    title: Text(club['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("Rejected: ${club['rejectionReason'] ?? 'Please check details.'}"),
+                    title: Text(club['name'],
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                        "Rejected: ${club['rejectionReason'] ?? 'Please check details.'}"),
                     trailing: ElevatedButton(
                       onPressed: () => _showEditClubSheet(context, club),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: const Text("Edit", style: TextStyle(color: Colors.white)),
+                      style:
+                          ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      child: const Text("Edit",
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 );
@@ -82,8 +93,6 @@ class ClubLeaderDashboard extends StatelessWidget {
   }
 }
 
-
-
 void _showCreateEventSheet(BuildContext context, String clubId) {
   final titleController = TextEditingController();
   final descController = TextEditingController();
@@ -94,14 +103,24 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
     builder: (context) => Padding(
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16, right: 16, top: 16),
+          left: 16,
+          right: 16,
+          top: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("Create Club Event", 
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
-          TextField(controller: titleController, decoration: const InputDecoration(labelText: "Event Title")),
-          TextField(controller: descController, decoration: const InputDecoration(labelText: "Event Description")),
+          const Text("Create Club Event",
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryBlue)),
+          TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: "Event Title")),
+          TextField(
+              controller: descController,
+              decoration:
+                  const InputDecoration(labelText: "Event Description")),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () async {
@@ -113,9 +132,9 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
                 await FirebaseFirestore.instance.collection('events').add({
                   'title': eventTitle,
                   'description': descController.text,
-                  'clubId': clubId, 
+                  'clubId': clubId,
                   'creatorId': FirebaseAuth.instance.currentUser?.uid,
-                  'dateTime': DateTime.now(), 
+                  'dateTime': DateTime.now(),
                   'participants': [], // Initialize empty participants list
                 });
 
@@ -128,7 +147,7 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
 
                 if (membersSnapshot.docs.isNotEmpty) {
                   WriteBatch batch = FirebaseFirestore.instance.batch();
-                  
+
                   for (var userDoc in membersSnapshot.docs) {
                     DocumentReference notifRef = FirebaseFirestore.instance
                         .collection('users')
@@ -137,8 +156,9 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
                         .doc();
 
                     batch.set(notifRef, {
-                      'title': "New Club Event! 🎊",
-                      'message': "A new event '$eventTitle' has been posted. Check it out!",
+                      'title': "New Club Event!",
+                      'message':
+                          "A new event '$eventTitle' has been posted. Check it out!",
                       'type': 'event',
                       'isRead': false,
                       'timestamp': FieldValue.serverTimestamp(),
@@ -150,7 +170,8 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Event posted and members notified!")),
+                    const SnackBar(
+                        content: Text("Event posted and members notified!")),
                   );
                 }
               } catch (e) {
@@ -161,8 +182,10 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
-            child: const Text("Post Event", style: TextStyle(color: Colors.white)),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+            child:
+                const Text("Post Event", style: TextStyle(color: Colors.white)),
           ),
           const SizedBox(height: 20),
         ],
@@ -182,19 +205,32 @@ void _showEditClubSheet(BuildContext context, DocumentSnapshot clubDoc) {
     isScrollControlled: true,
     builder: (context) => Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16, right: 16, top: 16),
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 16,
+          right: 16,
+          top: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("Edit & Resubmit Club", 
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+          const Text("Edit & Resubmit Club",
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryBlue)),
           const SizedBox(height: 10),
           const Text("Update your details based on the admin's feedback.",
-            textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
-          TextField(controller: nameController, decoration: const InputDecoration(labelText: "Club Name")),
-          TextField(controller: categoryController, decoration: const InputDecoration(labelText: "Category")),
-          TextField(controller: descController, decoration: const InputDecoration(labelText: "Description"), maxLines: 3),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
+          TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: "Club Name")),
+          TextField(
+              controller: categoryController,
+              decoration: const InputDecoration(labelText: "Category")),
+          TextField(
+              controller: descController,
+              decoration: const InputDecoration(labelText: "Description"),
+              maxLines: 3),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
@@ -202,26 +238,34 @@ void _showEditClubSheet(BuildContext context, DocumentSnapshot clubDoc) {
               onPressed: () async {
                 try {
                   // Update the document and RESET status to pending
-                  await FirebaseFirestore.instance.collection('clubs').doc(clubDoc.id).update({
+                  await FirebaseFirestore.instance
+                      .collection('clubs')
+                      .doc(clubDoc.id)
+                      .update({
                     'name': nameController.text.trim(),
                     'category': categoryController.text.trim(),
                     'description': descController.text.trim(),
-                    'status': 'pending', // Resetting triggers the Admin review flow again
+                    'status':
+                        'pending', // Resetting triggers the Admin review flow again
                     'updatedAt': FieldValue.serverTimestamp(),
                   });
 
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Club details updated and resubmitted for approval!")),
+                      const SnackBar(
+                          content: Text(
+                              "Club details updated and resubmitted for approval!")),
                     );
                   }
                 } catch (e) {
                   debugPrint("Error updating club: $e");
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
-              child: const Text("Resubmit for Approval", style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue),
+              child: const Text("Resubmit for Approval",
+                  style: TextStyle(color: Colors.white)),
             ),
           ),
           const SizedBox(height: 20),

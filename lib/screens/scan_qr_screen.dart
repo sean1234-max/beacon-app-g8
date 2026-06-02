@@ -5,17 +5,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ScanQrScreen — Club leader opens this to scan participant QR codes.
-//
-// Flow:
-//   Camera detects QR code
-//     → reads the ticketId string
-//     → verifies against Firestore (event_registrations collection)
-//     → shows result bottom sheet
-//     → leader taps "Check In" to mark attendance
-// ─────────────────────────────────────────────────────────────────────────────
-
 class ScanQrScreen extends StatefulWidget {
   final Event event;
   const ScanQrScreen({super.key, required this.event});
@@ -43,7 +32,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     super.dispose();
   }
 
-  // ── Called automatically every time camera detects a QR code ──
+  //Called automatically every time camera detects a QR code
   Future<void> _onDetect(BarcodeCapture capture) async {
     // If we're already handling a previous scan, ignore new ones
     if (_isProcessing) return;
@@ -76,6 +65,19 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
         status: _ScanStatus.invalid,
         ticketId: ticketId,
         ticketData: null,
+      );
+      return;
+    }
+
+    // ── Event mismatch check ──
+    final String scannedEventTitle =
+        (ticketData['eventTitle'] ?? '').toString().trim();
+    final String selectedEventTitle = widget.event.title.trim();
+    if (scannedEventTitle.toLowerCase() != selectedEventTitle.toLowerCase()) {
+      _showResultSheet(
+        status: _ScanStatus.wrongEvent,
+        ticketId: ticketId,
+        ticketData: ticketData,
       );
       return;
     }
@@ -169,7 +171,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     );
   }
 
-  // ── Restart the camera after the sheet is dismissed ──
+  //Restart the camera after the sheet is dismissed
   void _resumeCamera() {
     setState(() => _isProcessing = false);
     _camera.start();
@@ -253,13 +255,9 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SCAN RESULT BOTTOM SHEET
 // Shows participant details and action buttons after scanning
-// ─────────────────────────────────────────────────────────────────────────────
-
-// All possible outcomes of a scan
-enum _ScanStatus { valid, alreadyCheckedIn, unpaid, invalid }
+enum _ScanStatus { valid, alreadyCheckedIn, unpaid, invalid, wrongEvent }
 
 class _ScanResultSheet extends StatelessWidget {
   final _ScanStatus status;
@@ -296,14 +294,20 @@ class _ScanResultSheet extends StatelessWidget {
       _ScanStatus.unpaid => (
           Colors.orange,
           Icons.warning_rounded,
-          'Payment Required ⚠️',
+          'Payment Required',
           'This registration has not been paid yet.',
         ),
       _ScanStatus.invalid => (
           Colors.red,
           Icons.cancel_rounded,
-          'Invalid QR Code ❌',
+          'Invalid QR Code',
           'This QR code was not found in the system.',
+        ),
+      _ScanStatus.wrongEvent => (
+          Colors.deepOrange,
+          Icons.event_busy_rounded,
+          'Wrong Event ❌',
+          'This ticket belongs to "${ticketData?['eventTitle'] ?? 'another event'}",\nnot this event.',
         ),
     };
 
@@ -425,7 +429,7 @@ class _ScanResultSheet extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ── Action buttons ──
+            //Action buttons
             Row(
               children: [
                 // "Scan Again" — always visible
@@ -496,10 +500,7 @@ class _ScanResultSheet extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // DETAIL ROW — one labelled row inside the participant details card
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -545,10 +546,7 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // CAMERA OVERLAY — dark surround with a transparent scan box in the middle
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _ScanOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -605,7 +603,7 @@ class _ScanOverlay extends StatelessWidget {
   }
 }
 
-// ─── Four white L-shaped corners ───
+//Four white L-shaped corners
 class _CornerBrackets extends StatelessWidget {
   final double size;
   const _CornerBrackets({required this.size});
@@ -659,7 +657,7 @@ class _CornerBrackets extends StatelessWidget {
   }
 }
 
-// ─── Single L-shape, mirrored for each corner ───
+//Single L-shape, mirrored for each corner
 class _L extends StatelessWidget {
   final Color color;
   final double len;

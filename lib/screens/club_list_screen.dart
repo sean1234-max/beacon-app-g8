@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
-
 import 'package:assignment/screens/club_chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -65,10 +63,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
     });
   }
 
-  // ─────────────────────────────────────────────
   //  TOP-LEVEL BUILD
-  // ─────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     if (_userRole != 'club_leader') {
@@ -98,6 +93,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
           children: [
             // TAB 1 – leader's own club management
             StreamBuilder<QuerySnapshot>(
+              // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
               stream: FirebaseFirestore.instance
                   .collection('clubs')
                   .where('leaderId', isEqualTo: _currentUserId)
@@ -128,19 +124,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  //  EXPLORE LAYOUT (student view)
-  // ─────────────────────────────────────────────
-
-  // ─────────────────────────────────────────────
-  //  EXPLORE LAYOUT (With Create Club Floating Button)
-  // ─────────────────────────────────────────────
-  // 🚀 Add this variable to your State class if it's not already there:
-  // String _selectedFilter = 'All';
-
-  // ─────────────────────────────────────────────
-  //  EXPLORE LAYOUT
-  // ─────────────────────────────────────────────
   Widget _buildExploreLayout() {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
@@ -174,9 +157,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  FILTER CHIPS WIDGET
-  // ─────────────────────────────────────────────
   Widget _buildFilterChips() {
     final categories = ['All', 'Sports', 'Academic', 'Arts', 'Tech'];
 
@@ -199,7 +180,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
               selectedColor: AppTheme.primaryBlue,
               backgroundColor: const Color(0xFFF0F2F5),
               checkmarkColor: Colors.white,
-              // 🚀 FIX: Correctly styling the chip text via labelStyle
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : Colors.black87,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -218,9 +198,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  EXPLORE CONTENT (Dynamically Filtered & Hides Owned Club)
-  // ─────────────────────────────────────────────
   Widget _buildExploreContent() {
     Query query = FirebaseFirestore.instance
         .collection('clubs')
@@ -231,18 +209,20 @@ class _ClubsScreenState extends State<ClubsScreen> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: query.snapshots(), 
+      // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
+      stream: query.snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // 🚀 FIX: Filter out any club that belongs to the current logged-in leader
         final allClubs = snapshot.data!.docs;
         final clubs = allClubs.where((doc) {
-          final Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
+          final Map<String, dynamic>? data =
+              doc.data() as Map<String, dynamic>?;
           final String leaderId = data?['leaderId'] ?? '';
-          return leaderId != _currentUserId; // Only keep clubs NOT owned by the user
+          return leaderId !=
+              _currentUserId; // Only keep clubs NOT owned by the user
         }).toList();
 
         if (clubs.isEmpty) {
@@ -361,8 +341,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
             ),
             const SizedBox(height: 15),
             DropdownButtonFormField<String>(
-              value:
-                  selectedCategory, // 🚀 FIX: Changed 'initialValue' to 'value' for DropdownButtonFormField
+              initialValue: selectedCategory,
               items: ['Sports', 'Academic', 'Arts', 'Tech']
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                   .toList(),
@@ -458,20 +437,19 @@ class _ClubsScreenState extends State<ClubsScreen> {
       ),
     );
   }
-  // ─────────────────────────────────────────────
+
   //  CLUB MANAGEMENT INTERFACE (leader / member)
-  // ─────────────────────────────────────────────
-  
   Widget _buildClubManagementInterface(DocumentSnapshot clubDoc) {
     final data = clubDoc.data() as Map<String, dynamic>;
     final String category = data['category'] ?? '';
     final String name = data['name'] ?? '';
     final String description = data['description'] ?? '';
     final int maxMembers = (data['maxMembers'] as num?)?.toInt() ?? 200;
-  
+
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4F8),
       body: StreamBuilder<QuerySnapshot>(
+          // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
           stream: FirebaseFirestore.instance
               .collection('registrations')
               .where('clubId', isEqualTo: clubDoc.id)
@@ -480,6 +458,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
             final int memberCount = regSnapshot.data?.docs.length ?? 0;
 
             return StreamBuilder<QuerySnapshot>(
+              // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
               stream: FirebaseFirestore.instance
                   .collection('clubs')
                   .doc(clubDoc.id)
@@ -493,7 +472,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
                 return ListView(
                   children: [
-                    // ── Hero Card ──────────────────────────────────────
+                    //Hero Card
                     Container(
                       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                       decoration: BoxDecoration(
@@ -509,7 +488,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 🚀 Step 3: Show the return button if the user is NOT the owner of this specific club
+                            // Step 3: Show the return button if the user is NOT the owner of this specific club
                             if (!isClubOwner) ...[
                               GestureDetector(
                                 onTap: () => Navigator.pop(context),
@@ -590,35 +569,44 @@ class _ClubsScreenState extends State<ClubsScreen> {
                                     color: Colors.white.withValues(alpha: 0.2),
                                   ),
                                   Expanded(
-                                    // 🚀 Isolated StreamBuilder to safely pull the live upcoming event count
+                                    //Isolated StreamBuilder to safely pull the live upcoming event count
                                     child: StreamBuilder<QuerySnapshot>(
+                                      // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
                                       stream: FirebaseFirestore.instance
                                           .collection('events')
-                                          .where('clubId', isEqualTo: clubDoc.id)
+                                          .where('clubId',
+                                              isEqualTo: clubDoc.id)
                                           .snapshots(),
                                       builder: (context, snapshot) {
                                         // Default to '0' while waiting or if an error happens
-                                        if (!snapshot.hasData) return _heroStat('EVENTS', '0');
+                                        if (!snapshot.hasData)
+                                          return _heroStat('EVENTS', '0');
 
                                         final now = DateTime.now();
 
-                                        // 🎯 Match the exact same logic used in your upcoming events slider
-                                        final int upcomingCount = snapshot.data!.docs.where((doc) {
+                                        //Match the exact same logic used in your upcoming events slider
+                                        final int upcomingCount =
+                                            snapshot.data!.docs.where((doc) {
                                           try {
-                                            final dataMap = doc.data() as Map<String, dynamic>?;
+                                            final dataMap = doc.data()
+                                                as Map<String, dynamic>?;
                                             if (dataMap == null) return false;
 
-                                            final Timestamp? dt = (dataMap['dateTime'] ?? dataMap['date']) as Timestamp?;
+                                            final Timestamp? dt =
+                                                (dataMap['dateTime'] ??
+                                                        dataMap['date'])
+                                                    as Timestamp?;
                                             if (dt == null) return false;
 
                                             // Only count events scheduled in the future
                                             return dt.toDate().isAfter(now);
                                           } catch (_) {
-                                            return false; 
+                                            return false;
                                           }
                                         }).length;
 
-                                        return _heroStat('EVENTS', '$upcomingCount');
+                                        return _heroStat(
+                                            'EVENTS', '$upcomingCount');
                                       },
                                     ),
                                   ),
@@ -712,94 +700,113 @@ class _ClubsScreenState extends State<ClubsScreen> {
                           const SizedBox(height: 24),
                           const Text(
                             "Upcoming Events",
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 12),
                           StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('events')
-                              .where('clubId', isEqualTo: clubDoc.id)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            // 🚀 Check for errors explicitly to avoid silent freezes
-                            if (snapshot.hasError) {
-                              return Center(child: Text("Error loading events: ${snapshot.error}"));
-                            }
-                            
-                            if (!snapshot.hasData) return const SizedBox();
-                            
-                            final now = DateTime.now();
-
-                            // 🚀 DEFENSIVE FIX: Safe filtering and sorting that won't throw "No element" or casting crashes
-                            final upcomingEventsList = snapshot.data!.docs.where((doc) {
-                              try {
-                                final dataMap = doc.data() as Map<String, dynamic>?;
-                                if (dataMap == null) return false;
-                                
-                                // Check either field variation safely
-                                final Timestamp? dt = (dataMap['dateTime'] ?? dataMap['date']) as Timestamp?;
-                                if (dt == null) return false;
-                                
-                                return dt.toDate().isAfter(now);
-                              } catch (_) {
-                                return false; // Skip corrupted items gracefully instead of crashing the tree
+                            // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
+                            stream: FirebaseFirestore.instance
+                                .collection('events')
+                                .where('clubId', isEqualTo: clubDoc.id)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              //Check for errors explicitly to avoid silent freezes
+                              if (snapshot.hasError) {
+                                return Center(
+                                    child: Text(
+                                        "Error loading events: ${snapshot.error}"));
                               }
-                            }).toList();
 
-                            // Safe Sorting wrapper
-                            if (upcomingEventsList.isNotEmpty) {
-                              try {
-                                upcomingEventsList.sort((a, b) {
-                                  final aMap = a.data() as Map<String, dynamic>;
-                                  final bMap = b.data() as Map<String, dynamic>;
-                                  
-                                  final aTime = ((aMap['dateTime'] ?? aMap['date']) as Timestamp?)?.toDate() ?? now;
-                                  final bTime = ((bMap['dateTime'] ?? bMap['date']) as Timestamp?)?.toDate() ?? now;
-                                  
-                                  return aTime.compareTo(bTime);
-                                });
-                              } catch (e) {
-                                debugPrint("Sorting fallback caught: $e");
+                              if (!snapshot.hasData) return const SizedBox();
+
+                              final now = DateTime.now();
+
+                              //DEFENSIVE FIX: Safe filtering and sorting that won't throw "No element" or casting crashes
+                              final upcomingEventsList =
+                                  snapshot.data!.docs.where((doc) {
+                                try {
+                                  final dataMap =
+                                      doc.data() as Map<String, dynamic>?;
+                                  if (dataMap == null) return false;
+
+                                  // Check either field variation safely
+                                  final Timestamp? dt = (dataMap['dateTime'] ??
+                                      dataMap['date']) as Timestamp?;
+                                  if (dt == null) return false;
+
+                                  return dt.toDate().isAfter(now);
+                                } catch (_) {
+                                  return false; // Skip corrupted items gracefully instead of crashing the tree
+                                }
+                              }).toList();
+
+                              // Safe Sorting wrapper
+                              if (upcomingEventsList.isNotEmpty) {
+                                try {
+                                  upcomingEventsList.sort((a, b) {
+                                    final aMap =
+                                        a.data() as Map<String, dynamic>;
+                                    final bMap =
+                                        b.data() as Map<String, dynamic>;
+
+                                    final aTime = ((aMap['dateTime'] ??
+                                                aMap['date']) as Timestamp?)
+                                            ?.toDate() ??
+                                        now;
+                                    final bTime = ((bMap['dateTime'] ??
+                                                bMap['date']) as Timestamp?)
+                                            ?.toDate() ??
+                                        now;
+
+                                    return aTime.compareTo(bTime);
+                                  });
+                                } catch (e) {
+                                  debugPrint("Sorting fallback caught: $e");
+                                }
                               }
-                            }
 
-                            if (upcomingEventsList.isEmpty) {
-                              return Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Center(
-                                  child: Text("No upcoming events planned yet.", style: TextStyle(color: Colors.grey)),
+                              if (upcomingEventsList.isEmpty) {
+                                return Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                        "No upcoming events planned yet.",
+                                        style: TextStyle(color: Colors.grey)),
+                                  ),
+                                );
+                              }
+
+                              return SizedBox(
+                                height: 160,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: upcomingEventsList.length,
+                                  itemBuilder: (context, index) {
+                                    final DocumentSnapshot eventDoc =
+                                        upcomingEventsList[index];
+
+                                    return _buildEventCard(
+                                      eventDoc,
+                                      clubDoc.id,
+                                      data['leaderId'] ?? '',
+                                    );
+                                  },
                                 ),
                               );
-                            }
-
-                            return SizedBox(
-                              height: 160,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: upcomingEventsList.length,
-                                itemBuilder: (context, index) {
-                                  final DocumentSnapshot eventDoc = upcomingEventsList[index]; 
-
-                                  return _buildEventCard(
-                                    eventDoc,           
-                                    clubDoc.id,         
-                                    data['leaderId'] ?? '',   
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
+                            },
+                          ),
                           const SizedBox(height: 24),
                           const Text("Recent Updates",
                               style: TextStyle(
                                   fontSize: 16, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 12),
                           StreamBuilder<QuerySnapshot>(
+                            // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
                             stream: FirebaseFirestore.instance
                                 .collection('clubs')
                                 .doc(clubDoc.id)
@@ -920,10 +927,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  HELPER WIDGETS
-  // ─────────────────────────────────────────────
-
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return "Just now";
     final DateTime date = (timestamp as Timestamp).toDate();
@@ -964,11 +968,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
   Widget _buildEventCard(
       DocumentSnapshot eventDoc, String clubId, String leaderId) {
     final event = eventDoc.data() as Map<String, dynamic>;
-    
-    // 🚀 FIX 1: Read 'dateTime' instead of 'date' to prevent the Null type crash
     final Timestamp? timestamp = event['dateTime'] as Timestamp?;
-    final DateTime date = timestamp != null ? timestamp.toDate() : DateTime.now();
-
+    final DateTime date =
+        timestamp != null ? timestamp.toDate() : DateTime.now();
     final String creatorId = event['creatorId'] ?? '';
     final bool isCreator = (creatorId == _currentUserId);
     final bool isLeader = (leaderId == _currentUserId);
@@ -1062,15 +1064,14 @@ class _ClubsScreenState extends State<ClubsScreen> {
       ),
     );
   }
-  // ─────────────────────────────────────────────
-  //  MEMBER MANAGEMENT
-  // ─────────────────────────────────────────────
 
+  //  MEMBER MANAGEMENT
   Widget _buildMemberTab(
       DocumentSnapshot clubDoc, String leaderId, bool isMeOwner) {
     final String clubName = clubDoc['name'] ?? "Club";
 
     return StreamBuilder<QuerySnapshot>(
+      // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
       stream: FirebaseFirestore.instance
           .collection('registrations')
           .where('clubId', isEqualTo: clubDoc.id)
@@ -1273,7 +1274,6 @@ class _ClubsScreenState extends State<ClubsScreen> {
           ),
         );
 
-        // ✅ FIXED: Pops past the current dialog and dashboard widgets,
         // stopping exactly when it hits the main interface shell (the very first route).
         Navigator.popUntil(context, (route) => route.isFirst);
       }
@@ -1453,12 +1453,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
     }
   }
 
-  // ─────────────────────────────────────────────
   //  STATUS SCREENS
-  // ─────────────────────────────────────────────
-
   Widget _buildPendingApprovalScreen(DocumentSnapshot clubDoc) {
-    // 🚀 Step 1: Safely extract data and provide fallbacks to prevent Null subtype crashes
+    // Step 1: Safely extract data and provide fallbacks to prevent Null subtype crashes
     final Map<String, dynamic>? data = clubDoc.data() as Map<String, dynamic>?;
     final String clubName = data?['name'] ?? "Your Club";
 
@@ -1473,7 +1470,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   size: 100, color: Colors.orange),
               const SizedBox(height: 24),
               Text(
-                "$clubName is Under Review", // 🚀 Step 2: Use the safe, non-null variable here
+                "$clubName is Under Review", //Step 2: Use the safe, non-null variable here
                 style:
                     const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
@@ -1576,10 +1573,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  FORM SHEETS
-  // ─────────────────────────────────────────────
-
   void _showEditClubSheet(BuildContext context, DocumentSnapshot clubDoc) {
     final nameController = TextEditingController(text: clubDoc['name']);
     final categoryController = TextEditingController(text: clubDoc['category']);
@@ -1735,10 +1729,10 @@ class _ClubsScreenState extends State<ClubsScreen> {
     final event = eventDoc.data() as Map<String, dynamic>;
     final titleController = TextEditingController(text: event['title']);
     final descController = TextEditingController(text: event['description']);
-    
-    // 🚀 FIX 1: Read 'dateTime' safely instead of 'date' to prevent the UI freeze crash
-    final Timestamp? timestamp = (event['dateTime'] ?? event['date']) as Timestamp?;
-    DateTime selectedDate = timestamp != null ? timestamp.toDate() : DateTime.now();
+    final Timestamp? timestamp =
+        (event['dateTime'] ?? event['date']) as Timestamp?;
+    DateTime selectedDate =
+        timestamp != null ? timestamp.toDate() : DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.fromDateTime(selectedDate);
 
     showModalBottomSheet(
@@ -1825,14 +1819,13 @@ class _ClubsScreenState extends State<ClubsScreen> {
                         selectedTime.hour,
                         selectedTime.minute,
                       );
-                      
+
                       _updateEvent(
-                        eventDoc.reference, 
+                        eventDoc.reference,
                         titleController.text,
-                        descController.text, 
+                        descController.text,
                         finalDateTime,
                       );
-                      
                     },
                     child: const Text("Save Changes",
                         style: TextStyle(color: Colors.white)),
@@ -1882,15 +1875,13 @@ class _ClubsScreenState extends State<ClubsScreen> {
       await ref.update({
         'title': title.trim(),
         'description': desc.trim(),
-        // 🚀 FIX 1: Change 'date' to 'dateTime' to match your teammate's schema
-        'dateTime': Timestamp.fromDate(date), 
+        'dateTime': Timestamp.fromDate(date),
         'lastEditedAt': FieldValue.serverTimestamp(),
       });
-      
+
       if (mounted) {
-        // 🚀 FIX 2: Only pop once! Let this function handle closing the sheet.
-        Navigator.pop(context); 
-        
+        Navigator.pop(context);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text("Event updated!"), backgroundColor: Colors.orange),

@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'dart:convert';
 import 'package:assignment/models/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -48,8 +46,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (mounted && doc.exists) {
         setState(() => _paymentQrBase64 = doc.data()?['base64'] as String?);
       }
-    } catch (_) {}
-    finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _qrLoading = false);
     }
   }
@@ -66,7 +64,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     final bytes = await picked.readAsBytes();
     if (bytes.lengthInBytes > 750000) {
-      _showError('Receipt image is too large. Please use a lower-resolution image.');
+      _showError(
+          'Receipt image is too large. Please use a lower-resolution image.');
       return;
     }
     setState(() => _receiptBase64 = base64Encode(bytes));
@@ -140,10 +139,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  //  BUILD
-  // ─────────────────────────────────────────────
-
+  //BUILD
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
@@ -194,10 +190,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  EVENT SUMMARY
-  // ─────────────────────────────────────────────
-
   Widget _buildEventSummary(Event event) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -213,8 +206,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               color: const Color(0xFFEEF2FF),
               borderRadius: BorderRadius.circular(12),
             ),
-            child:
-                const Icon(Icons.event_rounded, color: _primary, size: 24),
+            child: const Icon(Icons.event_rounded, color: _primary, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -233,15 +225,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 const SizedBox(height: 4),
                 Text(
                   event.location,
-                  style:
-                      const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
           ),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF0DC),
               borderRadius: BorderRadius.circular(20),
@@ -259,10 +249,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  PAYMENT DETAILS
-  // ─────────────────────────────────────────────
-
   Widget _buildPaymentDetailsCard(Event event) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -290,13 +277,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                   const SizedBox(width: 10),
                   const Text('Payment Details',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ],
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.green[50],
                   borderRadius: BorderRadius.circular(20),
@@ -351,8 +337,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
         Flexible(
           child: Text(
             value.isNotEmpty ? value : '—',
@@ -367,10 +352,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  PAYMENT QR
-  // ─────────────────────────────────────────────
-
   Widget _buildQrSection() {
     return Container(
       width: double.infinity,
@@ -394,15 +376,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const SizedBox(width: 10),
               const Text('Scan to Pay',
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ],
           ),
           const SizedBox(height: 16),
           if (_qrLoading)
             const SizedBox(
-                height: 180,
-                child: Center(child: CircularProgressIndicator()))
+                height: 180, child: Center(child: CircularProgressIndicator()))
           else if (_paymentQrBase64 != null)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -427,8 +407,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         size: 48, color: Colors.grey[400]),
                     const SizedBox(height: 8),
                     Text('QR not available',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey[500])),
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[500])),
                   ],
                 ),
               ),
@@ -438,10 +418,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  RECEIPT UPLOAD
-  // ─────────────────────────────────────────────
-
   Widget _buildReceiptUpload() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -465,8 +442,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const SizedBox(width: 10),
               const Text('Upload Receipt',
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ],
           ),
           const SizedBox(height: 14),
@@ -480,9 +456,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 color: const Color(0xFFF8F9FF),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _receiptBase64 != null
-                      ? Colors.teal
-                      : Colors.grey[300]!,
+                  color:
+                      _receiptBase64 != null ? Colors.teal : Colors.grey[300]!,
                   width: _receiptBase64 != null ? 2 : 1,
                 ),
               ),
@@ -533,8 +508,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               color: Colors.teal.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.add_photo_alternate_outlined,
-                                size: 32, color: Colors.teal),
+                            child: const Icon(
+                                Icons.add_photo_alternate_outlined,
+                                size: 32,
+                                color: Colors.teal),
                           ),
                           const SizedBox(height: 12),
                           const Text('Tap to upload payment receipt',
@@ -563,10 +540,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  REGISTER BUTTON
-  // ─────────────────────────────────────────────
-
   Widget _buildRegisterButton() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -593,15 +567,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
           label: Text(
             _isSubmitting ? 'Submitting...' : 'Register & Submit Receipt',
             style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white),
+                fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: _receiptBase64 != null ? _primary : Colors.grey,
             elevation: 0,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
       ),

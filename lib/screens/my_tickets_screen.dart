@@ -66,10 +66,7 @@ class MyTicketsScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // TICKET CARD — one card per registered event
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _TicketCard extends StatelessWidget {
   final String ticketId;
   final Map<String, dynamic> data;
@@ -116,7 +113,7 @@ class _TicketCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // ── Top colour strip with event name ──
+            //Top colour strip with event name
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -151,7 +148,7 @@ class _TicketCard extends StatelessWidget {
               ),
             ),
 
-            // ── Bottom: status badges + registered date ──
+            //Bottom: status badges + registered date
             Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
@@ -236,10 +233,7 @@ class _TicketCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // BADGE — small coloured pill label
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _Badge extends StatelessWidget {
   final String label;
   final Color color;
@@ -279,10 +273,7 @@ class _Badge extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // EMPTY STATE — shown when student has no tickets yet
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,4 @@
-//show each participants in a LIstTile with name, student ID, and checkin time
+//show each participants in a ListTile with name, student ID, and checkin time
 
 import 'package:assignment/models/event_model.dart';
 import 'package:assignment/services/database_service.dart';
@@ -16,6 +16,7 @@ class CheckedInParticipantsScreen extends StatelessWidget {
         title: Text('Checked-In: ${event.title}'),
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
+        // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
         stream: db.getCheckedInParticipants(event.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

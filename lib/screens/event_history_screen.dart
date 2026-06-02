@@ -472,8 +472,7 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
   }
 }
 
-// ─── DETAIL BOTTOM SHEET ─────────────────────────────────────────────────────
-
+//DETAIL BOTTOM SHEET
 class _EventDetailSheet extends StatelessWidget {
   const _EventDetailSheet({required this.event});
   final Event event;

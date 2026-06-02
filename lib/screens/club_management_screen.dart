@@ -16,8 +16,7 @@ class ClubManagementScreen extends StatefulWidget {
 class _ClubManagementScreenState extends State<ClubManagementScreen> {
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  // ─── Shared card decoration ──────────────────────────────────
-
+  //Shared card decoration
   static const BoxDecoration _cardDeco = BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.all(Radius.circular(14)),
@@ -30,8 +29,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     ],
   );
 
-  // ─── Helpers ─────────────────────────────────────────────────
-
+  //Helper
   IconData _categoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'technology':
@@ -81,8 +79,6 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ─── Grabber + title used by every bottom sheet ──────────────
-
   Widget _sheetHeader(BuildContext ctx, String title) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -115,8 +111,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ─── Section header with optional count badge ─────────────────
-
+  //Section header with optional count badge
   Widget _sectionHeader(String title, int? count) {
     return Row(
       children: [
@@ -143,10 +138,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
   //  BUILD
-  // ═══════════════════════════════════════════════════════════════
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -159,6 +151,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
             style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: StreamBuilder<QuerySnapshot>(
+        // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
         stream: FirebaseFirestore.instance
             .collection('clubs')
             .where('leaderId', isEqualTo: _currentUserId)
@@ -196,8 +189,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ─── Empty state ──────────────────────────────────────────────
-
+  //Empty state when user doesn't lead any clubs
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -223,10 +215,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
   //  1. HERO CARD
-  // ═══════════════════════════════════════════════════════════════
-
   Widget _buildHeroCard(String clubId, Map<String, dynamic> club) {
     final String category = club['category'] ?? '';
     final String name = club['name'] ?? '';
@@ -385,10 +374,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
   //  2. QUICK ACTIONS
-  // ═══════════════════════════════════════════════════════════════
-
   Widget _buildQuickActions(String clubId, Map<String, dynamic> club) {
     final actions = [
       {
@@ -413,8 +399,8 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
       },
       {
         'icon': Icons.swap_horiz_rounded,
-        'title': 'Transfers Leadership',
-        'sub': 'Pass your role',
+        'title': 'Transfer',
+        'sub': 'Pass leadership',
         'onTap': () {
           _showTransferLeadershipSheet(clubId, club);
         },
@@ -435,14 +421,14 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionHeader('Quick Actions', null),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 1.65,
+            childAspectRatio: 1.35,
             children: actions.map((a) {
               return Material(
                 color: Colors.white,
@@ -467,9 +453,13 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(a['title'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 13)),
                         Text(a['sub'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 11)),
                       ],
@@ -484,10 +474,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
   //  3. MEMBERS
-  // ═══════════════════════════════════════════════════════════════
-
   Widget _buildMembersSection(String clubId, Map<String, dynamic> club) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -605,10 +592,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
   //  4. UPCOMING EVENTS
-  // ═══════════════════════════════════════════════════════════════
-
   Widget _buildUpcomingEventsSection(String clubId) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -797,17 +781,9 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                   // pill buttons
                   Row(
                     children: [
-                      _actionPill('View', Icons.visibility_rounded,
-                          AppTheme.primaryBlue, () {}),
-                      const SizedBox(width: 6),
                       _actionPill('Edit', Icons.edit_rounded, Colors.orange,
                           () => _showEditEventSheet(eventId, event)),
                       const SizedBox(width: 6),
-                      _actionPill(
-                          'Remind',
-                          Icons.notifications_rounded,
-                          Colors.purple,
-                          () => _sendEventReminder(eventId, event)),
                     ],
                   ),
                 ],
@@ -861,9 +837,8 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  //  BOTTOM SHEETS
-  // ── Announcement ─────────────────────────────────────────────
-
+  //BOTTOM SHEETS
+  //Announcement
   void _showAnnouncementSheet(String clubId, Map<String, dynamic> club) {
     final titleCtrl = TextEditingController();
     final msgCtrl = TextEditingController();
@@ -914,7 +889,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                             if (uid != null) {
                               await NotificationService.sendNotification(
                                 userId: uid,
-                                title: '📢 ${titleCtrl.text.trim()}',
+                                title: titleCtrl.text.trim(),
                                 message: msgCtrl.text.trim(),
                                 type: 'broadcast',
                               );
@@ -939,8 +914,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ── Edit Club ────────────────────────────────────────────────
-
+  //Edit Club
   void _showEditClubSheet(String clubId, Map<String, dynamic> club) {
     final nameCtrl = TextEditingController(text: club['name'] ?? '');
     final catCtrl = TextEditingController(text: club['category'] ?? '');
@@ -1019,8 +993,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ── Edit Event ───────────────────────────────────────────────
-
+  //Edit Event
   void _showEditEventSheet(String eventId, Map<String, dynamic> event) {
     final titleCtrl = TextEditingController(text: event['title'] ?? '');
     final locationCtrl = TextEditingController(text: event['location'] ?? '');
@@ -1081,8 +1054,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ── Member detail sheet ──────────────────────────────────────
-
+  //Member detail sheet
   void _showMemberSheet(
       Map<String, dynamic> member, bool isLeader, String clubId) {
     final String name = member['name'] ?? 'Unknown';
@@ -1187,8 +1159,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
     );
   }
 
-  // ── Transfer Leadership ──────────────────────────────────────
-
+  //Transfer Leadership
   void _showTransferLeadershipSheet(
       String clubId, Map<String, dynamic> club) async {
     final mSnap = await FirebaseFirestore.instance
@@ -1479,7 +1450,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                       await NotificationService.sendNotification(
                         userId: newUid,
                         title: "You're now the Leader of "
-                            "${club['name']}! 👑",
+                            "${club['name']}!",
                         message: 'Congratulations! Leadership has '
                             'been transferred to you.',
                         type: 'approval',
@@ -1491,7 +1462,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                         if (uid != null) {
                           await NotificationService.sendNotification(
                             userId: uid,
-                            title: '🔄 Leadership Update',
+                            title: 'Leadership Update',
                             message: '$newName is now the new Leader '
                                 'of ${club['name']}.',
                             type: 'broadcast',
@@ -1536,25 +1507,6 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
         'members': FieldValue.arrayRemove([userId]),
       });
       _showSnackBar('$name removed from club.', Colors.orange);
-    } catch (e) {
-      _showSnackBar('Error: $e', Colors.red);
-    }
-  }
-
-  Future<void> _sendEventReminder(
-      String eventId, Map<String, dynamic> event) async {
-    try {
-      final participants = List<String>.from(event['participants'] ?? []);
-      for (final uid in participants) {
-        await NotificationService.sendNotification(
-          userId: uid,
-          title: '⏰ Reminder: ${event['title']}',
-          message: "Don't forget! The event is coming up. See you there!",
-          type: 'event',
-        );
-      }
-      _showSnackBar(
-          'Reminder sent to ${participants.length} attendees!', Colors.green);
     } catch (e) {
       _showSnackBar('Error: $e', Colors.red);
     }
