@@ -17,7 +17,7 @@ class EventHistoryScreen extends StatefulWidget {
 class _EventHistoryScreenState extends State<EventHistoryScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
-  String _filterType = 'all'; // 'all', 'free', 'paid'
+  String _filterType = 'all'; 
 
   static const Color _navy = Color(0xFF0A1628);
   static const Color _bg = Color(0xFFF2F4F8);

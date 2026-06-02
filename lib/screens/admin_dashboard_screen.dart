@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:universal_html/html.dart' as html;
 import '../theme/app_theme.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -17,11 +18,23 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
   int _selectedIndex = 0;
-
-  // 1. Add the search query variable here so it persists
+  bool _isDashboardMounted = true;
+  // Initialize search query
   String _userSearchQuery = "";
   String _searchQuery = "";
 
+  @override
+  void initState() {
+    super.initState();
+    _isDashboardMounted = true;
+  }
+
+  @override
+  void dispose() {
+    _isDashboardMounted = false; 
+    super.dispose();
+  }
+  // Top banner + bottom navigation bar
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,11 +55,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: "Logout",
             onPressed: () async {
-              // 🚀 Step 1: Clear the Firebase cloud token session
+              // 
               await FirebaseAuth.instance.signOut();
               
-              // 🚀 Step 2: Clear out any local custom alert dialogs or overlay sheets 
-              // back down to the root stream safely, bypassing context timing gaps!
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {
                   Navigator.of(context).popUntil((route) => route.isFirst);
@@ -58,7 +69,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
       
-      // 🚀 MOBILE FIX 1: The main body now takes up 100% width, no Row/Rail crowding
       body: SafeArea(
         child: Container(
           color: Colors.grey[50],
@@ -66,7 +76,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ),
 
-      // 🚀 MOBILE FIX 2: Moved the destinations into a professional bottom nav bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -122,7 +131,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // 4. This helper function replaces your '_pages' list
+  //Help user navigate to different pages based on the selected index of the bottom navigation bar
   Widget _getSelectedPage() {
     switch (_selectedIndex) {
       case 0:
@@ -134,12 +143,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 3:
         return _buildUserManagement();
       case 4:
-        return _buildLogsView(); // Add a new case for Logs
+        return _buildLogsView(); 
       default:
         return _buildOverviewStats();
     }
   }
 
+  // Activity logs interface
   Widget _buildLogsView() {
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -159,7 +169,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 24),
 
-          // --- THE LOG TABLE CONTAINER ---
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -295,7 +304,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                           fontSize: 13,
                                           fontFamily: 'Courier',
                                           color: Colors.grey[
-                                              700]), // Monospace aesthetic for IDs
+                                              700]), 
                                     ),
                                   ),
                                   // COLUMN 4: Timestamp
@@ -329,7 +338,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // Helper Text Style for Columns
+  //Grey color header of activity logs table
   TextStyle _tableHeaderStyle() {
     return TextStyle(
       fontSize: 11,
@@ -367,7 +376,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
       child: Text(
         action.replaceAll(
-            '_', ' '), // Makes "USER_BANNED" read beautifully as "USER BANNED"
+            '_', ' '), 
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.bold,
@@ -378,14 +387,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  //Admin dashboard overview interface code
   Widget _buildOverviewStats() {
     return SingleChildScrollView(
-      // 🚀 MOBILE FIX 1: Reduced padding from 32 down to 16 to maximize screen space
       padding: const EdgeInsets.all(16.0), 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🚀 MOBILE FIX 2: Switched Header Section from Row to Wrap to prevent horizontal text shearing
           Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.start,
@@ -398,7 +406,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const Text(
                     "System Insights",
                     style: TextStyle(
-                      // 🚀 MOBILE FIX 3: Decreased font size slightly (32 to 26) for mobile scaling
                       fontSize: 26, 
                       fontWeight: FontWeight.bold, 
                       letterSpacing: -0.5,
@@ -455,7 +462,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                   return LayoutBuilder(
                     builder: (context, constraints) {
-                      // Adjust column count based on screen width
                       int crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 800 ? 2 : 1);
                       return GridView.count(
                         shrinkWrap: true,
@@ -480,8 +486,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               pendingClubs.toString(),
                               Icons.hourglass_empty,
                               Colors.orange),
-                          _buildAnalyticsCard("Security Health", "Stable",
-                              Icons.gpp_good, Colors.green),
                         ],
                       );
                     },
@@ -491,8 +495,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             },
           ),
           const SizedBox(height: 40),
-
-          const SizedBox(height: 50),
 
           // Quick Actions with improved container
           const Text("Administrative Tools", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
@@ -504,11 +506,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: _buildQuickActionRow(), // Your horizontal button action row
+            child: _buildQuickActionRow(), 
           ),
           const SizedBox(height: 40),
 
-          // 5. Advanced Data Graphs & Performance Splitting Section
           const Text("System Performance & Distribution", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text("Deep-dive historical operational metrics for campus activity planning.", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
@@ -537,7 +538,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 24),
           
-          // 6. Bottom High-Density Footers (Live Audit Feed + Server Health Panel)
           LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth > 1000) {
@@ -566,6 +566,86 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildServerHealthPanel() {
+    // 🚀 REAL-TIME ENGINE: Creates a continuous stream firing a ping sequence every 3 seconds
+    Stream<Map<String, dynamic>> streamInfrastructureHealth() async* {
+      while (_isDashboardMounted) {
+        String firestoreStatus = "Connecting...";
+        Color firestoreColor = Colors.orange;
+        
+        String storageStatus = "Calculating...";
+        Color storageColor = Colors.orange;
+        
+        String fcmStatus = "Disconnected";
+        Color fcmColor = Colors.red;
+
+        try {
+          // 1. Live Firestore Ping Measurement
+          final stopwatch = Stopwatch()..start();
+          await FirebaseFirestore.instance.collection('system_logs').limit(1).get().timeout(
+            const Duration(seconds: 2),
+          );
+          stopwatch.stop();
+          
+          firestoreStatus = "Operational (${stopwatch.elapsedMilliseconds}ms)";
+          firestoreColor = Colors.green;
+        } catch (e) {
+          firestoreStatus = "Latency Alert / Offline";
+          firestoreColor = Colors.red;
+        }
+
+        try {
+          // 2. Fetch Storage Aggregates
+          DocumentSnapshot storageMeta = await FirebaseFirestore.instance
+              .collection('system_metrics')
+              .doc('storage_summary')
+              .get();
+
+          if (storageMeta.exists && storageMeta.data() != null) {
+            final data = storageMeta.data() as Map<String, dynamic>;
+            double gigaBytesUsed = (data['bytesUsed'] ?? 0) / (1024 * 1024 * 1024);
+            double maxQuota = (data['maxQuotaGB'] ?? 50.0);
+            
+            storageStatus = "${gigaBytesUsed.toStringAsFixed(1)} GB / ${maxQuota.toStringAsFixed(0)} GB Used";
+            storageColor = (gigaBytesUsed / maxQuota) > 0.85 ? Colors.red : Colors.green;
+          } else {
+            storageStatus = "0.0 GB / 50 GB Used";
+            storageColor = Colors.green;
+          }
+        } catch (e) {
+          storageStatus = "Metrics Unavailable";
+          storageColor = Colors.grey;
+        }
+
+        try {
+          // 3. Live FCM Gateway Token Check
+          String? token = await FirebaseMessaging.instance.getToken();
+          if (token != null) {
+            fcmStatus = "Connected (Active)";
+            fcmColor = Colors.green;
+          }
+        } catch (e) {
+          fcmStatus = "Gateway Error";
+          fcmColor = Colors.red;
+        }
+
+        // 🚀 SAFETY CHECK: If user switched tabs during network latency, abort immediately
+        if (!_isDashboardMounted) break;
+
+        // Emit the fresh dataset map up to the StreamBuilder UI layout
+        yield {
+          'firestoreStatus': firestoreStatus,
+          'firestoreColor': firestoreColor,
+          'storageStatus': storageStatus,
+          'storageColor': storageColor,
+          'fcmStatus': fcmStatus,
+          'fcmColor': fcmColor,
+        };
+
+        // ⏱️ TICK RATE: Wait 3 seconds before spinning the loop and pinging again
+        await Future.delayed(const Duration(seconds: 3));
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -576,13 +656,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Cloud Service Infrastructure", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text(
+            "Cloud Service Infrastructure", 
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
-          _buildStatusRow("Cloud Firestore Node", "Operational", Colors.green),
-          const SizedBox(height: 12),
-          _buildStatusRow("Firebase Storage Cluster", "9.2 GB / 50 GB Used", Colors.orange),
-          const SizedBox(height: 12),
-          _buildStatusRow("FCM Push Gateway", "Connected", Colors.green),
+          
+          // 🚀 SWITCHED TO STREAMBUILDER: Re-renders layout components on every stream yield
+          StreamBuilder<Map<String, dynamic>>(
+            stream: streamInfrastructureHealth(),
+            builder: (context, snapshot) {
+              // Show loader only on the very first initial network boot calculation
+              if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 100,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final metrics = snapshot.data ?? {
+                'firestoreStatus': 'Offline', 'firestoreColor': Colors.red,
+                'storageStatus': 'Unavailable', 'storageColor': Colors.grey,
+                'fcmStatus': 'Disconnected', 'fcmColor': Colors.red,
+              };
+
+              return Column(
+                children: [
+                  _buildStatusRow("Cloud Firestore Node", metrics['firestoreStatus'], metrics['firestoreColor']),
+                  const SizedBox(height: 12),
+                  _buildStatusRow("Firebase Storage Cluster", metrics['storageStatus'], metrics['storageColor']),
+                  const SizedBox(height: 12),
+                  _buildStatusRow("FCM Push Gateway", metrics['fcmStatus'], metrics['fcmColor']),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
