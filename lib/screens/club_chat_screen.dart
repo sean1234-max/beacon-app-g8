@@ -15,7 +15,8 @@ class ClubChatScreen extends StatefulWidget {
 class _ClubChatScreenState extends State<ClubChatScreen> {
   final TextEditingController msgController = TextEditingController();
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
-  final String _currentUserName = FirebaseAuth.instance.currentUser?.displayName ?? "Member";
+  final String _currentUserName =
+      FirebaseAuth.instance.currentUser?.displayName ?? "Member";
 
   @override
   void dispose() {
@@ -50,24 +51,29 @@ class _ClubChatScreenState extends State<ClubChatScreen> {
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
+              // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
               stream: FirebaseFirestore.instance
                   .collection('messages')
                   .where('clubId', isEqualTo: widget.club.id)
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                
+                if (!snapshot.hasData)
+                  return const Center(child: CircularProgressIndicator());
+
                 final messages = snapshot.data!.docs;
                 return ListView.builder(
                   reverse: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[index];
                     final bool isMe = msg['senderId'] == _currentUserId;
-                    
-                    final DateTime timestamp = (msg['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+
+                    final DateTime timestamp =
+                        (msg['timestamp'] as Timestamp?)?.toDate() ??
+                            DateTime.now();
 
                     return _buildChatBubble(msg, isMe, timestamp);
                   },
@@ -86,10 +92,13 @@ class _ClubChatScreenState extends State<ClubChatScreen> {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (!isMe)
-            Text(msg['senderName'] ?? "Member", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            Text(msg['senderName'] ?? "Member",
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             margin: const EdgeInsets.symmetric(vertical: 2),
@@ -97,9 +106,12 @@ class _ClubChatScreenState extends State<ClubChatScreen> {
               color: isMe ? Colors.blue : Colors.grey[200], // Adjust colors
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Text(msg['text'], style: TextStyle(color: isMe ? Colors.white : Colors.black87)),
+            child: Text(msg['text'],
+                style: TextStyle(color: isMe ? Colors.white : Colors.black87)),
           ),
-          Text("${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}", style: const TextStyle(fontSize: 10)),
+          Text(
+              "${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}",
+              style: const TextStyle(fontSize: 10)),
         ],
       ),
     );
@@ -114,7 +126,10 @@ class _ClubChatScreenState extends State<ClubChatScreen> {
           Expanded(
             child: TextField(
               controller: msgController,
-              decoration: InputDecoration(hintText: "Type a message...", filled: true, fillColor: Colors.grey[100]),
+              decoration: InputDecoration(
+                  hintText: "Type a message...",
+                  filled: true,
+                  fillColor: Colors.grey[100]),
             ),
           ),
           IconButton(icon: const Icon(Icons.send), onPressed: sendMessage),

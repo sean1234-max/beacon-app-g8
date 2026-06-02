@@ -31,7 +31,10 @@ class ClubDetailsScreen extends StatelessWidget {
 
     try {
       // 2. Fetch user data for personalized updates
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       final String userName = userDoc.data()?['displayName'] ?? "Student";
 
       // 3. Create the registration document (used for Member List)
@@ -62,7 +65,10 @@ class ClubDetailsScreen extends StatelessWidget {
       });
 
       // 4. Update the User document with the club ID
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
         'joinedClubs': FieldValue.arrayUnion([club.id])
       });
 
@@ -70,7 +76,8 @@ class ClubDetailsScreen extends StatelessWidget {
       await NotificationService.sendNotification(
         userId: user.uid,
         title: "Welcome to ${club.name}! 🌟",
-        message: "You've successfully joined the club. Check your notifications for new updates!",
+        message:
+            "You've successfully joined the club. Check your notifications for new updates!",
         type: "approval",
       );
 
@@ -83,7 +90,7 @@ class ClubDetailsScreen extends StatelessWidget {
           ),
         );
 
-        // ✅ PASS RESULT BACK: Closes the details page and signals 
+        // ✅ PASS RESULT BACK: Closes the details page and signals
         // club_list_screen.dart to transition smoothly to the dashboard route.
         Navigator.pop(context, true);
       }
@@ -96,7 +103,7 @@ class ClubDetailsScreen extends StatelessWidget {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,13 +124,16 @@ class ClubDetailsScreen extends StatelessWidget {
               children: [
                 Text(club.category,
                     style: const TextStyle(
-                        color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+                        color: AppTheme.primaryBlue,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 const Text("About the Club",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text(club.description,
-                    style: const TextStyle(fontSize: 16, color: Colors.black87)),
+                    style:
+                        const TextStyle(fontSize: 16, color: Colors.black87)),
               ],
             ),
           ),
@@ -134,18 +144,22 @@ class ClubDetailsScreen extends StatelessWidget {
               width: double.infinity,
               // Use StreamBuilder to listen to the registration status live
               child: StreamBuilder<QuerySnapshot>(
+                // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
                 stream: FirebaseFirestore.instance
                     .collection('registrations')
                     .where('clubId', isEqualTo: club.id)
-                    .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                    .where('userId',
+                        isEqualTo: FirebaseAuth.instance.currentUser?.uid)
                     .snapshots(),
                 builder: (context, snapshot) {
                   // Check if the user is already registered in this club
-                  final bool isMember = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+                  final bool isMember =
+                      snapshot.hasData && snapshot.data!.docs.isNotEmpty;
 
                   return ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: isMember ? Colors.grey : AppTheme.primaryBlue,
+                        backgroundColor:
+                            isMember ? Colors.grey : AppTheme.primaryBlue,
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12))),

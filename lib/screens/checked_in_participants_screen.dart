@@ -16,6 +16,7 @@ class CheckedInParticipantsScreen extends StatelessWidget {
         title: Text('Checked-In: ${event.title}'),
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
+        // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
         stream: db.getCheckedInParticipants(event.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

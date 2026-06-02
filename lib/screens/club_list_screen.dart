@@ -96,6 +96,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
           children: [
             // TAB 1 – leader's own club management
             StreamBuilder<QuerySnapshot>(
+              // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
               stream: FirebaseFirestore.instance
                   .collection('clubs')
                   .where('leaderId', isEqualTo: _currentUserId)
@@ -229,13 +230,13 @@ class _ClubsScreenState extends State<ClubsScreen> {
     }
 
     return StreamBuilder<QuerySnapshot>(
+      // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
       stream: query.snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // 🚀 FIX: Filter out any club that belongs to the current logged-in leader
         final allClubs = snapshot.data!.docs;
         final clubs = allClubs.where((doc) {
           final Map<String, dynamic>? data =
@@ -472,6 +473,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4F8),
       body: StreamBuilder<QuerySnapshot>(
+          // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
           stream: FirebaseFirestore.instance
               .collection('registrations')
               .where('clubId', isEqualTo: clubDoc.id)
@@ -480,6 +482,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
             final int memberCount = regSnapshot.data?.docs.length ?? 0;
 
             return StreamBuilder<QuerySnapshot>(
+              // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
               stream: FirebaseFirestore.instance
                   .collection('clubs')
                   .doc(clubDoc.id)
@@ -590,8 +593,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
                                     color: Colors.white.withValues(alpha: 0.2),
                                   ),
                                   Expanded(
-                                    // 🚀 Isolated StreamBuilder to safely pull the live upcoming event count
+                                    //Isolated StreamBuilder to safely pull the live upcoming event count
                                     child: StreamBuilder<QuerySnapshot>(
+                                      // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
                                       stream: FirebaseFirestore.instance
                                           .collection('events')
                                           .where('clubId',
@@ -725,6 +729,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                           ),
                           const SizedBox(height: 12),
                           StreamBuilder<QuerySnapshot>(
+                            // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
                             stream: FirebaseFirestore.instance
                                 .collection('events')
                                 .where('clubId', isEqualTo: clubDoc.id)
@@ -825,6 +830,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                                   fontSize: 16, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 12),
                           StreamBuilder<QuerySnapshot>(
+                            // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
                             stream: FirebaseFirestore.instance
                                 .collection('clubs')
                                 .doc(clubDoc.id)
@@ -1097,6 +1103,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
     final String clubName = clubDoc['name'] ?? "Club";
 
     return StreamBuilder<QuerySnapshot>(
+      // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
       stream: FirebaseFirestore.instance
           .collection('registrations')
           .where('clubId', isEqualTo: clubDoc.id)

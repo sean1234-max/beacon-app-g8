@@ -45,7 +45,7 @@ class DatabaseService {
     return _db
         .collection('events')
         .where('creatorId', isEqualTo: creatorId)
-        .where('dateTime', isGreaterThan: Timestamp.now())
+        .where('dateTime', isGreaterThan: Timestamp.fromDate(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)))
         .orderBy('dateTime')
         .snapshots()
         .map((snapshot) =>

@@ -22,6 +22,9 @@ class EventSelectionScreen extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
               final events = snapshot.data ?? [];
               if (events.isEmpty) {
                 return const Center(child: Text('No upcoming events found'));

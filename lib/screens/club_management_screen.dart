@@ -159,6 +159,7 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
             style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: StreamBuilder<QuerySnapshot>(
+        // listens CONTINUOUSLY. Every time Firestore data changes, the UI rebuilds automatically.
         stream: FirebaseFirestore.instance
             .collection('clubs')
             .where('leaderId', isEqualTo: _currentUserId)
@@ -801,17 +802,9 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                   // pill buttons
                   Row(
                     children: [
-                      _actionPill('View', Icons.visibility_rounded,
-                          AppTheme.primaryBlue, () {}),
-                      const SizedBox(width: 6),
                       _actionPill('Edit', Icons.edit_rounded, Colors.orange,
                           () => _showEditEventSheet(eventId, event)),
                       const SizedBox(width: 6),
-                      _actionPill(
-                          'Remind',
-                          Icons.notifications_rounded,
-                          Colors.purple,
-                          () => _sendEventReminder(eventId, event)),
                     ],
                   ),
                 ],
@@ -1540,25 +1533,6 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
         'members': FieldValue.arrayRemove([userId]),
       });
       _showSnackBar('$name removed from club.', Colors.orange);
-    } catch (e) {
-      _showSnackBar('Error: $e', Colors.red);
-    }
-  }
-
-  Future<void> _sendEventReminder(
-      String eventId, Map<String, dynamic> event) async {
-    try {
-      final participants = List<String>.from(event['participants'] ?? []);
-      for (final uid in participants) {
-        await NotificationService.sendNotification(
-          userId: uid,
-          title: '⏰ Reminder: ${event['title']}',
-          message: "Don't forget! The event is coming up. See you there!",
-          type: 'event',
-        );
-      }
-      _showSnackBar(
-          'Reminder sent to ${participants.length} attendees!', Colors.green);
     } catch (e) {
       _showSnackBar('Error: $e', Colors.red);
     }
