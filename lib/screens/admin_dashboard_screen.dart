@@ -36,15 +36,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
         backgroundColor: AppTheme.primaryBlue,
-        elevation: 0, // Flat look for web/desktop dashboards
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: "Logout",
             onPressed: () async {
-              // 1. Sign out from Firebase first to revoke active session tokens
               await FirebaseAuth.instance.signOut();
-              
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {
                   Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
@@ -55,77 +53,67 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const SizedBox(width: 12),
         ],
       ),
-      body: Row(
-        children: [
-          // --- THEME WRAPPER FOR SELECTION CAPSULE TINT ---
-          NavigationRailTheme(
-            data: NavigationRailThemeData(
-              indicatorColor: AppTheme.primaryBlue.withOpacity(0.1),
-            ),
-            child: NavigationRail(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: (int index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
-              backgroundColor: Colors.white,
-              labelType: NavigationRailLabelType.all,
-              minWidth: 80,
-              useIndicator: true,
-              selectedIconTheme:
-                  const IconThemeData(color: AppTheme.primaryBlue, size: 26),
-              unselectedIconTheme:
-                  IconThemeData(color: Colors.grey[600], size: 24),
-              selectedLabelTextStyle: const TextStyle(
-                  color: AppTheme.primaryBlue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12),
-              unselectedLabelTextStyle: TextStyle(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500, // Fixed naming alignment
-                  fontSize: 12),
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.analytics_outlined),
-                  selectedIcon: Icon(Icons.analytics),
-                  label: Text('Overview'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.fact_check_outlined),
-                  selectedIcon: Icon(Icons.fact_check),
-                  label: Text('Approvals'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.event_note_outlined),
-                  selectedIcon: Icon(Icons.event_note),
-                  label: Text('Events'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.manage_accounts_outlined),
-                  selectedIcon: Icon(Icons.manage_accounts),
-                  label: Text('Roles'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.history_outlined),
-                  selectedIcon: Icon(Icons.history),
-                  label: Text('Logs'),
-                ),
-              ],
-            ),
-          ),
+      
+      // 🚀 MOBILE FIX 1: The main body now takes up 100% width, no Row/Rail crowding
+      body: SafeArea(
+        child: Container(
+          color: Colors.grey[50],
+          child: _getSelectedPage(),
+        ),
+      ),
 
-          // Fine vertical line separating rail from content
-          VerticalDivider(thickness: 1, width: 1, color: Colors.grey[200]),
-
-          // Main Dynamic Content Pane
-          Expanded(
-            child: Container(
-              color: Colors.grey[50],
-              child: _getSelectedPage(),
+      // 🚀 MOBILE FIX 2: Moved the destinations into a professional bottom nav bar
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (int index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          backgroundColor: Colors.white,
+          type: BottomNavigationBarType.fixed, // Keeps labels visible for all 5 items
+          selectedItemColor: AppTheme.primaryBlue,
+          unselectedItemColor: Colors.grey[600],
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.analytics_outlined),
+              activeIcon: Icon(Icons.analytics),
+              label: 'Overview',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.fact_check_outlined),
+              activeIcon: Icon(Icons.fact_check),
+              label: 'Approvals',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.event_note_outlined),
+              activeIcon: Icon(Icons.event_note),
+              label: 'Events',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.manage_accounts_outlined),
+              activeIcon: Icon(Icons.manage_accounts),
+              label: 'Roles',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.history_outlined),
+              activeIcon: Icon(Icons.history),
+              label: 'Logs',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -390,43 +378,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildOverviewStats() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
+      // 🚀 MOBILE FIX 1: Reduced padding from 32 down to 16 to maximize screen space
+      padding: const EdgeInsets.all(16.0), 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Header Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // 🚀 MOBILE FIX 2: Switched Header Section from Row to Wrap to prevent horizontal text shearing
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.start,
+            spacing: 16, // Horizontal gap
+            runSpacing: 12, // Vertical gap when wrapped down
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     "System Insights",
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1),
+                    style: TextStyle(
+                      // 🚀 MOBILE FIX 3: Decreased font size slightly (32 to 26) for mobile scaling
+                      fontSize: 26, 
+                      fontWeight: FontWeight.bold, 
+                      letterSpacing: -0.5,
+                    ),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     "Monitor Beacon performance and user activity",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   ),
                 ],
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min, // Restricts inner row layout tightly to elements
+                  mainAxisSize: MainAxisSize.min, 
                   children: [
-                    const Icon(Icons.refresh, size: 16, color: Colors.grey),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.refresh, size: 14, color: Colors.grey),
+                    const SizedBox(width: 6),
                     Text(
                       "Last updated: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}",
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
                     ),
                   ],
                 ),
@@ -435,9 +432,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 20),
           
-          // 2. Incident & Alert Ribbon Banner
-          _buildSystemAlertBanner(), 
-          const SizedBox(height: 40),
 
           // 3. Statistics Grid (Realtime Counter Cards via StreamBuilder)
           StreamBuilder(
@@ -589,46 +583,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildStatusRow("Firebase Storage Cluster", "9.2 GB / 50 GB Used", Colors.orange),
           const SizedBox(height: 12),
           _buildStatusRow("FCM Push Gateway", "Connected", Colors.green),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSystemAlertBanner() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 28),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Pending Content Reports",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade900, fontSize: 15),
-                ),
-                Text(
-                  "3 student events have been flagged by community filters today. Please review them in the Approvals tab.",
-                  style: TextStyle(color: Colors.amber.shade800, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _selectedIndex = 1; // Jumps directly to the Approvals Tab
-              });
-            },
-            child: Text("Review Now", style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold)),
-          ),
         ],
       ),
     );
@@ -1183,31 +1137,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildQuickActionRow() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _actionButton(
-          "Export User List",
-          Icons.download,
-          AppTheme.primaryBlue,
-          onTap: () => _exportData('users'),
-        ),
-        const SizedBox(width: 12),
-        _actionButton(
-          "System Logs",
-          Icons.terminal,
-          AppTheme.primaryBlue,
-          onTap: () {
-            setState(() {
-              _selectedIndex = 3;
-            });
+        // 🚀 MOBILE HINT: Only shows on narrow viewports to guide the user
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // If the parent width is typical for mobile (e.g., less than 600px)
+            if (MediaQuery.of(context).size.width < 600) {
+              return const Padding(
+                padding: EdgeInsets.only(bottom: 8.0, left: 4.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.swipe_left_alt_rounded, size: 14, color: Colors.grey),
+                    SizedBox(width: 4),
+                    Text(
+                      "Scroll left or right to see all tools",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink(); // Hide completely on Web/Desktop
           },
         ),
-        const SizedBox(width: 12),
-        _actionButton(
-          "BroadCast Alert",
-          Icons.campaign,
-          AppTheme.primaryBlue,
-          onTap: _showBroadcastDialog, // Link the function here
+        
+        // The horizontal scrolling row of action items
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              _actionButton(
+                "Export User List",
+                Icons.download,
+                AppTheme.primaryBlue,
+                onTap: () => _exportData('users'),
+              ),
+              const SizedBox(width: 12),
+              _actionButton(
+                "System Logs",
+                Icons.terminal,
+                AppTheme.primaryBlue,
+                onTap: () {
+                  setState(() {
+                    _selectedIndex = 3;
+                  });
+                },
+              ),
+              const SizedBox(width: 12),
+              _actionButton(
+                "BroadCast Alert",
+                Icons.campaign,
+                AppTheme.primaryBlue,
+                onTap: _showBroadcastDialog,
+              ),
+            ],
+          ),
         ),
       ],
     );
