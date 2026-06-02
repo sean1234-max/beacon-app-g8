@@ -36,18 +36,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
         backgroundColor: AppTheme.primaryBlue,
-        elevation: 0, // Flat look for web/desktop dashboards
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: "Logout",
             onPressed: () async {
-              // 1. Sign out from Firebase first to revoke active session tokens
+              // 🚀 Step 1: Clear the Firebase cloud token session
               await FirebaseAuth.instance.signOut();
               
+              // 🚀 Step 2: Clear out any local custom alert dialogs or overlay sheets 
+              // back down to the root stream safely, bypassing context timing gaps!
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                 }
               });
             },
@@ -55,77 +57,67 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const SizedBox(width: 12),
         ],
       ),
-      body: Row(
-        children: [
-          // --- THEME WRAPPER FOR SELECTION CAPSULE TINT ---
-          NavigationRailTheme(
-            data: NavigationRailThemeData(
-              indicatorColor: AppTheme.primaryBlue.withOpacity(0.1),
-            ),
-            child: NavigationRail(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: (int index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
-              backgroundColor: Colors.white,
-              labelType: NavigationRailLabelType.all,
-              minWidth: 80,
-              useIndicator: true,
-              selectedIconTheme:
-                  const IconThemeData(color: AppTheme.primaryBlue, size: 26),
-              unselectedIconTheme:
-                  IconThemeData(color: Colors.grey[600], size: 24),
-              selectedLabelTextStyle: const TextStyle(
-                  color: AppTheme.primaryBlue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12),
-              unselectedLabelTextStyle: TextStyle(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500, // Fixed naming alignment
-                  fontSize: 12),
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.analytics_outlined),
-                  selectedIcon: Icon(Icons.analytics),
-                  label: Text('Overview'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.fact_check_outlined),
-                  selectedIcon: Icon(Icons.fact_check),
-                  label: Text('Approvals'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.event_note_outlined),
-                  selectedIcon: Icon(Icons.event_note),
-                  label: Text('Events'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.manage_accounts_outlined),
-                  selectedIcon: Icon(Icons.manage_accounts),
-                  label: Text('Roles'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.history_outlined),
-                  selectedIcon: Icon(Icons.history),
-                  label: Text('Logs'),
-                ),
-              ],
-            ),
-          ),
+      
+      // 🚀 MOBILE FIX 1: The main body now takes up 100% width, no Row/Rail crowding
+      body: SafeArea(
+        child: Container(
+          color: Colors.grey[50],
+          child: _getSelectedPage(),
+        ),
+      ),
 
-          // Fine vertical line separating rail from content
-          VerticalDivider(thickness: 1, width: 1, color: Colors.grey[200]),
-
-          // Main Dynamic Content Pane
-          Expanded(
-            child: Container(
-              color: Colors.grey[50],
-              child: _getSelectedPage(),
+      // 🚀 MOBILE FIX 2: Moved the destinations into a professional bottom nav bar
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (int index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          backgroundColor: Colors.white,
+          type: BottomNavigationBarType.fixed, // Keeps labels visible for all 5 items
+          selectedItemColor: AppTheme.primaryBlue,
+          unselectedItemColor: Colors.grey[600],
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.analytics_outlined),
+              activeIcon: Icon(Icons.analytics),
+              label: 'Overview',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.fact_check_outlined),
+              activeIcon: Icon(Icons.fact_check),
+              label: 'Approvals',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.event_note_outlined),
+              activeIcon: Icon(Icons.event_note),
+              label: 'Events',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.manage_accounts_outlined),
+              activeIcon: Icon(Icons.manage_accounts),
+              label: 'Roles',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.history_outlined),
+              activeIcon: Icon(Icons.history),
+              label: 'Logs',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -347,12 +339,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // Custom Badge Builder for Enterprise Log Categorization
   Widget _buildActionBadge(String action) {
     Color backgroundColor;
     Color textColor;
 
-    // Dynamically assign theme tokens based on your system triggers
     if (action.contains('APPROVE') || action.contains('CREATE')) {
       backgroundColor = Colors.green[50]!;
       textColor = Colors.green[700]!;
@@ -390,43 +380,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildOverviewStats() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
+      // 🚀 MOBILE FIX 1: Reduced padding from 32 down to 16 to maximize screen space
+      padding: const EdgeInsets.all(16.0), 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Header Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // 🚀 MOBILE FIX 2: Switched Header Section from Row to Wrap to prevent horizontal text shearing
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.start,
+            spacing: 16, // Horizontal gap
+            runSpacing: 12, // Vertical gap when wrapped down
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     "System Insights",
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1),
+                    style: TextStyle(
+                      // 🚀 MOBILE FIX 3: Decreased font size slightly (32 to 26) for mobile scaling
+                      fontSize: 26, 
+                      fontWeight: FontWeight.bold, 
+                      letterSpacing: -0.5,
+                    ),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     "Monitor Beacon performance and user activity",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   ),
                 ],
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min, // Restricts inner row layout tightly to elements
+                  mainAxisSize: MainAxisSize.min, 
                   children: [
-                    const Icon(Icons.refresh, size: 16, color: Colors.grey),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.refresh, size: 14, color: Colors.grey),
+                    const SizedBox(width: 6),
                     Text(
                       "Last updated: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}",
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
                     ),
                   ],
                 ),
@@ -435,11 +434,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 20),
           
-          // 2. Incident & Alert Ribbon Banner
-          _buildSystemAlertBanner(), 
-          const SizedBox(height: 40),
-
-          // 3. Statistics Grid (Realtime Counter Cards via StreamBuilder)
           StreamBuilder(
             stream: FirebaseFirestore.instance.collection('clubs').snapshots(),
             builder: (context, clubSnapshot) {
@@ -589,46 +583,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildStatusRow("Firebase Storage Cluster", "9.2 GB / 50 GB Used", Colors.orange),
           const SizedBox(height: 12),
           _buildStatusRow("FCM Push Gateway", "Connected", Colors.green),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSystemAlertBanner() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 28),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Pending Content Reports",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade900, fontSize: 15),
-                ),
-                Text(
-                  "3 student events have been flagged by community filters today. Please review them in the Approvals tab.",
-                  style: TextStyle(color: Colors.amber.shade800, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _selectedIndex = 1; // Jumps directly to the Approvals Tab
-              });
-            },
-            child: Text("Review Now", style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold)),
-          ),
         ],
       ),
     );
@@ -920,93 +874,116 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Real-time ratio analysis of logged administrative tasks.", 
+            "Real-time breakdown of core system roles and mass broadcast counts.", 
             style: TextStyle(color: Colors.grey[500], fontSize: 13),
           ),
           const SizedBox(height: 24),
           
+          // 🚀 STREAM 1: Read user roles dynamically from the 'users' collection
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('system_logs').snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
+            stream: FirebaseFirestore.instance.collection('users').snapshots(),
+            builder: (context, userSnapshot) {
+              if (!userSnapshot.hasData) {
                 return const SizedBox(
                   height: 120, 
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
 
-              final allLogs = snapshot.data!.docs;
-              final int totalCount = allLogs.length;
+              final userDocs = userSnapshot.data!.docs;
 
-              if (totalCount == 0) {
-                return const Text(
-                  "No logged actions found to compute distribution.", 
-                  style: TextStyle(color: Colors.grey),
-                );
-              }
+              // Compute precise role aggregates from user dataset
+              int studentCount = 0;
+              int clubLeaderCount = 0;
+              int adminCount = 0;
 
-              // 1. DYNAMIC AGGREGATION MAP
-              // Key: Action Name (String), Value: Occurrence Count (Int)
-              Map<String, int> actionDistribution = {};
-
-              for (var doc in allLogs) {
-                final data = doc.data() as Map<String, dynamic>;
-                // Read raw string, fallback to 'Unclassified' if missing
-                String actionName = (data['action'] ?? 'Unclassified').toString().trim();
+              for (var doc in userDocs) {
+                final data = doc.data() as Map<String, dynamic>? ?? {};
+                String role = data['role'] ?? 'student';
                 
-                // Increment frequency map dynamically
-                actionDistribution[actionName] = (actionDistribution[actionName] ?? 0) + 1;
+                if (role == 'admin') {
+                  adminCount++;
+                } else if (role == 'club_leader') {
+                  clubLeaderCount++;
+                } else {
+                  studentCount++; // Defaults unassigned profiles gracefully to standard student base
+                }
               }
 
-              // 2. Sort the map so highest volume actions appear first
-              var sortedActions = actionDistribution.entries.toList()
-                ..sort((a, b) => b.value.compareTo(a.value));
+              // 🚀 STREAM 2: Nest a FutureBuilder to read the mass broadcasts counts seamlessly
+              return FutureBuilder<QuerySnapshot>(
+                future: FirebaseFirestore.instance.collection('announcements').get(), // Change collection name if yours is different (e.g. 'broadcasts')
+                builder: (context, broadcastSnapshot) {
+                  // Display structural container block while fetching asynchronous metrics
+                  if (!broadcastSnapshot.hasData) {
+                    return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
+                  }
 
-              // 3. Dynamic Color Pool to loop through for unique actions
-              final List<Color> UIColorsPool = [
-                const Color(0xFF0D47A1), // Blue
-                Colors.teal,
-                Colors.red.shade600,
-                Colors.orange,
-                Colors.purple,
-                Colors.amber,
-              ];
-
-              return Column(
-                children: [
-                  // Dynamically build rows based on actual database entries
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: sortedActions.length,
-                    itemBuilder: (context, index) {
-                      final entry = sortedActions[index];
-                      double percentageFactor = entry.value / totalCount;
-                      Color displayColor = UIColorsPool[index % UIColorsPool.length];
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: _buildMetricDistributionRow(
-                          entry.key, // Dynamic name from DB (e.g., "Sent Broadcast Alert")
-                          "${(percentageFactor * 100).toStringAsFixed(0)}%", // Dynamic calculation
-                          displayColor,
-                          percentageFactor,
-                        ),
-                      );
-                    },
-                  ),
+                  int broadcastCount = broadcastSnapshot.data!.docs.length;
                   
-                  const SizedBox(height: 12),
-                  Divider(color: Colors.grey[100]),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Calculate the combined global metric pool size
+                  int totalVolume = studentCount + clubLeaderCount + adminCount + broadcastCount;
+
+                  if (totalVolume == 0) {
+                    return const Text(
+                      "No system records found to compute metrics.", 
+                      style: TextStyle(color: Colors.grey),
+                    );
+                  }
+
+                  final List<Map<String, dynamic>> metricItems = [
+                    {
+                      'label': 'Student Accounts',
+                      'count': studentCount,
+                      'color': const Color(0xFF0D47A1), // Royal Blue
+                    },
+                    {
+                      'label': 'Club Leader Accounts',
+                      'count': clubLeaderCount,
+                      'color': Colors.teal,
+                    },
+                    {
+                      'label': 'Admin Accounts',
+                      'count': adminCount,          // 🚀 FIXED: Now passing the correct int counter variable
+                      'color': Colors.red.shade600, // 🚀 FIXED: Now properly assigned to the color key
+                    },
+                    {
+                      'label': 'Mass Broadcasts Sent',
+                      'count': broadcastCount,
+                      'color': Colors.orange.shade700,
+                    },
+                  ];
+
+                  return Column(
                     children: [
-                      Text("Total Calculated Volume", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                      Text("$totalCount log actions", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      ...metricItems.map((item) {
+                        int count = item['count'];
+                        double percentageFactor = totalVolume > 0 ? (count / totalVolume) : 0.0;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: _buildMetricDistributionRow(
+                            item['label'],
+                            "$count (${(percentageFactor * 100).toStringAsFixed(0)}%)",
+                            item['color'],
+                            percentageFactor,
+                          ),
+                        );
+                      }),
+                      
+                      const SizedBox(height: 12),
+                      Divider(color: Colors.grey[100]),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("Total Tracked Entities", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                          Text("$totalVolume items", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        ],
+                      )
                     ],
-                  )
-                ],
+                  );
+                },
               );
             },
           ),
@@ -1169,10 +1146,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         break;
 
       case 'run_audit':
-        // Specifically for Security Health
-        setState(() => _selectedIndex = 3); // Jump straight to System Logs
+        setState(() => _selectedIndex = 3); 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Opening Security Audit Logs...")),
+          const SnackBar(content: Text("Displaying latest system audit logs!")),
         );
         break;
 
@@ -1183,31 +1159,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildQuickActionRow() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _actionButton(
-          "Export User List",
-          Icons.download,
-          AppTheme.primaryBlue,
-          onTap: () => _exportData('users'),
-        ),
-        const SizedBox(width: 12),
-        _actionButton(
-          "System Logs",
-          Icons.terminal,
-          AppTheme.primaryBlue,
-          onTap: () {
-            setState(() {
-              _selectedIndex = 3;
-            });
+        // 🚀 MOBILE HINT: Only shows on narrow viewports to guide the user
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // If the parent width is typical for mobile (e.g., less than 600px)
+            if (MediaQuery.of(context).size.width < 600) {
+              return const Padding(
+                padding: EdgeInsets.only(bottom: 8.0, left: 4.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.swipe_left_alt_rounded, size: 14, color: Colors.grey),
+                    SizedBox(width: 4),
+                    Text(
+                      "Scroll left or right to see all tools",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink(); // Hide completely on Web/Desktop
           },
         ),
-        const SizedBox(width: 12),
-        _actionButton(
-          "BroadCast Alert",
-          Icons.campaign,
-          AppTheme.primaryBlue,
-          onTap: _showBroadcastDialog, // Link the function here
+        
+        // The horizontal scrolling row of action items
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              _actionButton(
+                "Export User List",
+                Icons.download,
+                AppTheme.primaryBlue,
+                onTap: () => _exportData('users'),
+              ),
+              const SizedBox(width: 12),
+              _actionButton(
+                "System Logs",
+                Icons.terminal,
+                AppTheme.primaryBlue,
+                onTap: () {
+                  setState(() {
+                    _selectedIndex = 3;
+                  });
+                },
+              ),
+              const SizedBox(width: 12),
+              _actionButton(
+                "BroadCast Alert",
+                Icons.campaign,
+                AppTheme.primaryBlue,
+                onTap: _showBroadcastDialog,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -1545,28 +1558,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildUserManagement() {
     return Column(
       children: [
-        // 1. Search Bar
+        // 1. Sleek Search Bar
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: TextField(
             decoration: InputDecoration(
               hintText: "Search by Display Name or Student ID...",
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
               filled: true,
               fillColor: Colors.white,
-              // Add a clear button if text is not empty
               suffixIcon: _userSearchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: const Icon(Icons.clear, size: 20),
                       onPressed: () => setState(() => _userSearchQuery = ""))
                   : null,
-              border: OutlineInputBorder(
+              contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
+              enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Colors.grey[200]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppTheme.primaryBlue, width: 1.5),
               ),
             ),
             onChanged: (value) {
-              // Update the search query state
               setState(() {
                 _userSearchQuery = value.toLowerCase();
               });
@@ -1574,7 +1590,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
 
-        // 2. User List
+        // 2. User Management List View
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('users').snapshots(),
@@ -1586,143 +1602,165 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              // 1. Convert the query to lowercase ONCE for efficiency
               final String query = _userSearchQuery.trim().toLowerCase();
 
-              // Filter the users based on search query
+              // Filter users safely based on search query criteria
               final filteredUsers = snapshot.data!.docs.where((doc) {
                 try {
                   final data = doc.data() as Map<String, dynamic>?;
                   if (data == null) return false;
+                  if (query.isEmpty) return true;
 
-                  if (query.isEmpty) {
-                    return true; 
-                  }
+                  final String name = (data['displayName'] ?? "").toString().toLowerCase();
+                  final String tp = (data['studentId'] ?? "").toString().toLowerCase();
 
-                  final String name =
-                      (data['displayName'] ?? "").toString().toLowerCase();
-                  final String tp =
-                      (data['studentId'] ?? "").toString().toLowerCase();
-
-                  final bool matches =
-                      name.contains(query) || tp.contains(query);
-                  return matches;
+                  return name.contains(query) || tp.contains(query);
                 } catch (e) {
-                  // If one specific user document is broken, skip it and print the error
                   debugPrint("Error filtering user document ${doc.id}: $e");
                   return false;
                 }
               }).toList();
 
-              // 3. Handle the empty state
               if (filteredUsers.isEmpty) {
                 return const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.search_off, size: 64, color: Colors.grey),
+                      Icon(Icons.search_off_rounded, size: 64, color: Colors.grey),
                       SizedBox(height: 16),
-                      Text("No users found matching your search.",
-                          style: TextStyle(color: Colors.grey, fontSize: 16)),
+                      Text(
+                        "No users found matching your search.",
+                        style: TextStyle(color: Colors.grey, fontSize: 15, fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 );
               }
 
-              // 4. Return the List
               return ListView.builder(
-                padding: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.only(bottom: 24),
                 itemCount: filteredUsers.length,
                 itemBuilder: (context, index) {
                   final user = filteredUsers[index];
                   final data = user.data() as Map<String, dynamic>;
 
                   final String currentRole = data['role'] ?? 'student';
-                  final String displayName = data['displayName'] ?? "New User";
+                  final String displayName = data['displayName'] ?? "Unassigned User";
                   final String studentId = data['studentId'] ?? "TPXXXXXX";
-                  final String email = data['email'] ?? "No Email";
+                  final String email = data['email'] ?? "No Email Registered";
+                  final String? photoUrl = data['photoUrl']; 
 
                   return Card(
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    elevation: 2,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    elevation: 0, 
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      leading: CircleAvatar(
-                        radius: 25,
-                        backgroundColor: currentRole == 'admin'
-                            ? Colors.red[50]
-                            : AppTheme.primaryBlue.withOpacity(0.1),
-                        child: Icon(
-                          currentRole == 'admin'
-                              ? Icons.admin_panel_settings
-                              : Icons.person,
-                          color: currentRole == 'admin'
-                              ? Colors.red
-                              : AppTheme.primaryBlue,
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade100),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        
+                        // Profile avatar placeholder or network picture loader
+                        leading: CircleAvatar(
+                          radius: 26,
+                          backgroundColor: currentRole == 'admin' ? Colors.red.shade50 : Colors.blue.shade50,
+                          backgroundImage: (photoUrl != null && photoUrl.isNotEmpty && photoUrl.startsWith('http'))
+                              ? NetworkImage(photoUrl)
+                              : null,
+                          child: (photoUrl == null || photoUrl.isEmpty || !photoUrl.startsWith('http'))
+                              ? Icon(
+                                  currentRole == 'admin' ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                                  color: currentRole == 'admin' ? Colors.red.shade700 : AppTheme.primaryBlue,
+                                  size: 26,
+                                )
+                              : null,
                         ),
-                      ),
-                      title: Text(
-                        displayName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(email,
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.grey[700])),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
+                        
+                        title: Text(
+                          displayName,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        
+                        // Subtitle area: Displays email and Student ID
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                email,
+                                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                studentId,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade500,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // 🚀 FULL CONTROL DROPDOWN: Allows Admins to toggle between all 3 systemic roles
+                        trailing: DropdownButtonHideUnderline(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(4),
+                              color: Colors.grey.shade50,
+                              border: Border.all(color: Colors.grey.shade200),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(
-                              studentId,
-                              style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                        ],
-                      ),
-                      trailing: DropdownButtonHideUnderline(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DropdownButton<String>(
-                            value: ['student', 'leader', 'admin']
-                                    .contains(currentRole)
-                                ? currentRole
-                                : 'student',
-                            icon: const Icon(Icons.arrow_drop_down, size: 20),
-                            items: <String>['student', 'leader', 'admin']
-                                .map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value.toUpperCase()),
-                              );
-                            }).toList(),
-                            onChanged: (newRole) {
-                              if (user.id ==
-                                  FirebaseAuth.instance.currentUser?.uid) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          "You cannot change your own admin role!")),
+                            child: DropdownButton<String>(
+                              // Validates against all three possible role keys
+                              value: ['student', 'club_leader', 'admin'].contains(currentRole) 
+                                  ? currentRole 
+                                  : 'student',
+                              icon: Icon(Icons.unfold_more_rounded, size: 16, color: Colors.grey.shade600),
+                              elevation: 3,
+                              style: TextStyle(
+                                color: Colors.grey.shade800,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                              // 🚀 CONDITIONAL MATRIX: Full access for Admin targets
+                              items: (() {
+                                if (currentRole == 'admin') {
+                                  // Allows full structural assignment options for admins
+                                  return <String>['student', 'club_leader', 'admin'];
+                                } else if (currentRole == 'club_leader') {
+                                  return <String>['club_leader', 'admin'];
+                                } else {
+                                  return <String>['student', 'admin'];
+                                }
+                              })().map((String value) {
+                                String displayLabel = value.toUpperCase();
+                                if (value == 'club_leader') displayLabel = 'CLUB LEADER';
+                                
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(displayLabel),
                                 );
-                                return;
-                              }
-                              _updateUserRole(user.id, newRole!);
-                            },
+                              }).toList(),
+                              onChanged: (newRole) {
+                                if (user.id == FirebaseAuth.instance.currentUser?.uid) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Action denied: You cannot revoke your own admin rights!"),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                _updateUserRole(user.id, newRole!);
+                              },
+                            ),
                           ),
                         ),
                       ),
@@ -1742,11 +1780,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     await FirebaseFirestore.instance.collection('users').doc(userId).update({
       'role': newRole,
     });
-    _logAction("Changed role to ${newRole.toUpperCase()}", userId);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("User role updated to $newRole")),
-    );
+    String displayRole = newRole == 'club_leader' ? 'CLUB LEADER' : newRole.toUpperCase();
+
+    _logAction("Changed role to $displayRole", userId);
+
+    // Displays the clean role name in the snackbar notification
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("User role updated to ${displayRole.toLowerCase()}"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Widget _buildEventManagement() {
@@ -2059,42 +2106,83 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
   }
 
-  void _showRejectDialog(
+    void _showRejectDialog(
       BuildContext context, String clubId, String clubName, String leaderId) {
     final TextEditingController reasonController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Reason for Rejection"),
-        content: TextField(
-          controller: reasonController,
-          decoration: const InputDecoration(
-            hintText: "e.g., Incomplete information...",
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Pass the name and leaderId into the handleApproval call
-              _handleApproval(clubId, 'rejected', clubName, leaderId,
-                  reason: reasonController.text.trim());
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Confirm Reject",
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      builder: (context) {
+        // 🚀 FIXED: Declaring it here preserves the error message across state changes!
+        String? errorText; 
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Reason for Rejection"),
+              content: TextField(
+                controller: reasonController,
+                decoration: InputDecoration(
+                  hintText: "e.g., Incomplete information...",
+                  border: const OutlineInputBorder(),
+                  // 🚀 This will now successfully show the red warning text below the input field!
+                  errorText: errorText, 
+                ),
+                onChanged: (value) {
+                  // Clear the red warning message immediately when the admin starts typing
+                  if (value.trim().isNotEmpty && errorText != null) {
+                    setDialogState(() {
+                      errorText = null;
+                    });
+                  }
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    reasonController.dispose();
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final String finalReason = reasonController.text.trim();
+
+                    // Validation Check: Blocks submission and updates error message if empty
+                    if (finalReason.isEmpty) {
+                      setDialogState(() {
+                        errorText = "Please provide a reject reason!";
+                      });
+                      return; // Blocks function thread execution
+                    }
+
+                    // If text is valid, proceed safely with backend operations
+                    _handleApproval(
+                      clubId, 
+                      'rejected', 
+                      clubName, 
+                      leaderId,
+                      reason: finalReason,
+                    );
+                    
+                    reasonController.dispose(); 
+                    Navigator.pop(context); 
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text(
+                    "Confirm Reject",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
-
+  
   void _showBroadcastDialog() {
     final TextEditingController controller = TextEditingController();
 

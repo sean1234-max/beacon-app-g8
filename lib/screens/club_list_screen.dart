@@ -486,14 +486,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   .collection('events')
                   .snapshots(),
               builder: (context, eventSnapshot) {
-                final int eventCount = eventSnapshot.data?.docs.length ?? 0;
-
-                // 🚀 Step 1: Safely extract the club leader's user ID from the document data
                 final Map<String, dynamic>? clubData =
                     clubDoc.data() as Map<String, dynamic>?;
                 final String clubLeaderId = clubData?['leaderId'] ?? '';
-
-                // 🚀 Step 2: Compare with the logged-in user ID to see if they own THIS specific club
                 final bool isClubOwner = _currentUserId == clubLeaderId;
 
                 return ListView(
