@@ -69,6 +69,19 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
       return;
     }
 
+    // ── Event mismatch check ──
+    final String scannedEventTitle =
+        (ticketData['eventTitle'] ?? '').toString().trim();
+    final String selectedEventTitle = widget.event.title.trim();
+    if (scannedEventTitle.toLowerCase() != selectedEventTitle.toLowerCase()) {
+      _showResultSheet(
+        status: _ScanStatus.wrongEvent,
+        ticketId: ticketId,
+        ticketData: ticketData,
+      );
+      return;
+    }
+
     final bool isCheckedIn = ticketData['isCheckedIn'] ?? false;
     final String paymentStatus = ticketData['paymentStatus'] ?? 'free';
 
@@ -244,7 +257,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
 
 // SCAN RESULT BOTTOM SHEET
 // Shows participant details and action buttons after scanning
-enum _ScanStatus { valid, alreadyCheckedIn, unpaid, invalid }
+enum _ScanStatus { valid, alreadyCheckedIn, unpaid, invalid, wrongEvent }
 
 class _ScanResultSheet extends StatelessWidget {
   final _ScanStatus status;
@@ -289,6 +302,12 @@ class _ScanResultSheet extends StatelessWidget {
           Icons.cancel_rounded,
           'Invalid QR Code',
           'This QR code was not found in the system.',
+        ),
+      _ScanStatus.wrongEvent => (
+          Colors.deepOrange,
+          Icons.event_busy_rounded,
+          'Wrong Event ❌',
+          'This ticket belongs to "${ticketData?['eventTitle'] ?? 'another event'}",\nnot this event.',
         ),
     };
 

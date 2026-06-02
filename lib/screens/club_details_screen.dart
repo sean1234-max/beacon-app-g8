@@ -75,7 +75,7 @@ class ClubDetailsScreen extends StatelessWidget {
       // 5. Send the welcome notification
       await NotificationService.sendNotification(
         userId: user.uid,
-        title: "Welcome to ${club.name}! 🌟",
+        title: "Welcome to ${club.name}!",
         message:
             "You've successfully joined the club. Check your notifications for new updates!",
         type: "approval",
@@ -90,7 +90,7 @@ class ClubDetailsScreen extends StatelessWidget {
           ),
         );
 
-        // ✅ PASS RESULT BACK: Closes the details page and signals
+        //PASS RESULT BACK: Closes the details page and signals
         // club_list_screen.dart to transition smoothly to the dashboard route.
         Navigator.pop(context, true);
       }

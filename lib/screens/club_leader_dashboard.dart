@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../theme/app_theme.dart'; // Adjust path to your theme file
+import '../theme/app_theme.dart';
 
 class ClubLeaderDashboard extends StatelessWidget {
   const ClubLeaderDashboard({super.key});
@@ -156,7 +156,7 @@ void _showCreateEventSheet(BuildContext context, String clubId) {
                         .doc();
 
                     batch.set(notifRef, {
-                      'title': "New Club Event! 🎊",
+                      'title': "New Club Event!",
                       'message':
                           "A new event '$eventTitle' has been posted. Check it out!",
                       'type': 'event',

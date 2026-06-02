@@ -256,10 +256,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  BUILD
-  // ─────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

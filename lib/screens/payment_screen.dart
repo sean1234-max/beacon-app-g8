@@ -139,10 +139,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  //  BUILD
-  // ─────────────────────────────────────────────
-
+  //BUILD
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
@@ -193,10 +190,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  EVENT SUMMARY
-  // ─────────────────────────────────────────────
-
   Widget _buildEventSummary(Event event) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -255,10 +249,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  PAYMENT DETAILS
-  // ─────────────────────────────────────────────
-
   Widget _buildPaymentDetailsCard(Event event) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -361,10 +352,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  PAYMENT QR
-  // ─────────────────────────────────────────────
-
   Widget _buildQrSection() {
     return Container(
       width: double.infinity,
@@ -430,10 +418,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  RECEIPT UPLOAD
-  // ─────────────────────────────────────────────
-
   Widget _buildReceiptUpload() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -555,10 +540,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  REGISTER BUTTON
-  // ─────────────────────────────────────────────
-
   Widget _buildRegisterButton() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),

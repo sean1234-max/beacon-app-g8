@@ -59,10 +59,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     }
   }
 
-  // ─────────────────────────────────────────────
   //  REGISTRATION
-  // ─────────────────────────────────────────────
-
   Future<void> _handleRegistration() async {
     if (userId == null) return;
 
@@ -91,7 +88,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       try {
         await NotificationService.sendNotification(
           userId: userId!,
-          title: "Event Registered! 🎟️",
+          title: "Event Registered!",
           message:
               "You have successfully registered for ${widget.event.title}. Your QR pass is now active!",
           type: "event",
@@ -179,10 +176,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     }
   }
 
-  // ─────────────────────────────────────────────
-  //  BUILD
-  // ─────────────────────────────────────────────
-
+//  BUILD
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
@@ -451,10 +445,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  STATUS BADGE
-  // ─────────────────────────────────────────────
-
   Widget _buildStatusBadge(bool isExpired, bool isRegistered) {
     final String label;
     final Color color;
@@ -498,10 +489,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  INFO CARD
-  // ─────────────────────────────────────────────
-
   Widget _buildInfoCard({
     required IconData icon,
     required Color iconColor,
@@ -569,10 +557,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  ABOUT SECTION
-  // ─────────────────────────────────────────────
-
   Widget _buildAboutSection(Event event) {
     return Container(
       width: double.infinity,
@@ -608,10 +593,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  PAYMENT DETAILS
-  // ─────────────────────────────────────────────
-
   Widget _buildPaymentDetails(Event event) {
     return Container(
       width: double.infinity,
@@ -670,10 +652,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  QR CODE
-  // ─────────────────────────────────────────────
-
   Widget _buildQrSection() {
     return Container(
       width: double.infinity,
@@ -725,10 +704,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
   //  BUTTONS
-  // ─────────────────────────────────────────────
-
   Widget _buildRegisterButton(bool isExpired) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
