@@ -413,8 +413,8 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
       },
       {
         'icon': Icons.swap_horiz_rounded,
-        'title': 'Transfers Leadership',
-        'sub': 'Pass your role',
+        'title': 'Transfer',
+        'sub': 'Pass leadership',
         'onTap': () {
           _showTransferLeadershipSheet(clubId, club);
         },
@@ -435,14 +435,14 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionHeader('Quick Actions', null),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 1.65,
+            childAspectRatio: 1.35,
             children: actions.map((a) {
               return Material(
                 color: Colors.white,
@@ -467,9 +467,13 @@ class _ClubManagementScreenState extends State<ClubManagementScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(a['title'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 13)),
                         Text(a['sub'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 11)),
                       ],
