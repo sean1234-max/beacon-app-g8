@@ -57,10 +57,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: const Icon(Icons.logout, color: Colors.white),
               tooltip: "Logout",
               onPressed: () async {
-                // 1. Immediately drop the dashboard ticker loop switch
+
                 _isDashboardMounted = false; 
 
-                // 2. Kill the stack and route cleanly back to a brand new LoginScreen instance
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -68,7 +67,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   );
                 }
 
-                // 3. Clean up the server authentication session safely in the background
                 await FirebaseAuth.instance.signOut();
               },
             ),
@@ -2156,14 +2154,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     .doc(eventId)
                     .delete();
 
-                // 3. LOG THE ACTIVITY
-                await FirebaseFirestore.instance.collection('logs').add({
+                // 3. LOG THE ACTIVITY 
+                await FirebaseFirestore.instance.collection('system_logs').add({
                   'action': 'Admin Deleted Event',
                   'details': 'Event "$eventTitle" was removed by Admin.',
                   'targetId': eventId,
                   'timestamp': FieldValue.serverTimestamp(),
-                  'adminId':
-                      _currentUserId, // Ensure this variable is accessible
+                  'adminId': _currentUserId, 
                 });
 
                 // 4. NOTIFY THE CREATOR
